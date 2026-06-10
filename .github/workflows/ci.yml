@@ -1,0 +1,22 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: windows-latest  # tqcenter 仅 Windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install uv
+      - name: Configure PyPI mirror (China-friendly)
+        run: echo "UV_INDEX_URL=https://repo.huaweicloud.com/repository/pypi/simple" >> $GITHUB_ENV
+      - name: Install hatchling (build backend)
+        run: uv pip install --system "hatchling" || pip install hatchling
+      - name: Sync dependencies
+        run: uv sync --all-extras
+      - name: Run tests
+        run: uv run pytest --cov=stock_mcp --cov-report=xml
+      - uses: codecov/codecov-action@v3
+        with:
+          file: coverage.xml
