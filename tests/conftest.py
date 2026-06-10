@@ -15,6 +15,15 @@ def event_loop():
     loop.close()
 
 
+@pytest.fixture(autouse=True)
+def _reset_settings_singleton():
+    """每个测试前重置 settings 缓存，使 monkeypatch.setenv 立即生效。"""
+    from stock_mcp.config import reset_settings
+    reset_settings()
+    yield
+    reset_settings()
+
+
 @pytest.fixture
 def temp_cache_dir():
     """为每个测试提供独立的临时缓存目录"""
