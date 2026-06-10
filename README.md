@@ -8,7 +8,7 @@ A 股股票数据 MCP 服务。详见 `E:\claude codeworkspace\docs\superpowers\
 - [x] **P1 核心数据** — tqcenter 实时行情 + K 线
 - [x] **P2 多源 + 韧性** — sina/akshare 适配器、缓存、熔断、限流
 - [x] **P3 扩展数据** — 基本面、资讯、eastmoney
-- [ ] **P4 高级查询** — iwencai 自然语言选股
+- [x] **P4 高级查询** — iwencai 自然语言选股
 - [ ] **P5 完善** — 文档、CI、覆盖率
 
 ## 安装
@@ -17,6 +17,7 @@ A 股股票数据 MCP 服务。详见 `E:\claude codeworkspace\docs\superpowers\
 uv sync --all-extras
 cp .env.example .env
 # 编辑 .env 设置 TDX_PATH（通达信安装路径）
+# 可选: 设置 IWENCAI_COOKIE 启用自然语言选股
 ```
 
 ## 运行
@@ -56,6 +57,7 @@ uv run pytest --cov=stock_mcp
 | `get_kline` | K线数据 |
 | `get_fundamental` | 基本面数据 |
 | `get_news` | 资讯公告 |
+| `query_stocks` | 自然语言选股（需 iwencai cookie） |
 
 ## 数据源
 
@@ -63,3 +65,4 @@ uv run pytest --cov=stock_mcp
 - **sina** (priority 2)：新浪财经 HTTP
 - **akshare** (priority 3)：开源金融数据库
 - **eastmoney** (priority 4)：东方财富，资讯公告
+- **iwencai** (可选)：自然语言选股，需 cookie + Node.js
