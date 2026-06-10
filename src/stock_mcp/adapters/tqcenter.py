@@ -70,17 +70,48 @@ class TqcenterAdapter(BaseAdapter):
             self.enabled = False
             return False
 
+    @staticmethod
+    def _to_tq_code(code: str) -> str:
+        """补全 tqcenter 要求的 "6位代码.市场后缀" 格式
+
+        输入: "600519" / "600519.SH" / "sh600519"
+        输出: "600519.SH"
+        """
+        c = code.strip().upper()
+        # 已经有 .SH/.SZ/.BJ 后缀
+        if "." in c:
+            return c
+        # 去掉可能的前缀 sh/sz/bj
+        for prefix in ("SH", "SZ", "BJ"):
+            if c.startswith(prefix) and len(c) == len(prefix) + 6:
+                c = c[len(prefix):]
+                break
+        # 6位代码 -> 加市场后缀
+        if len(c) == 6 and c.isdigit():
+            # 上海: 6, 9 开头
+            if c.startswith(("60", "68", "90")):
+                return c + ".SH"
+            # 深圳: 0, 3 开头
+            if c.startswith(("00", "30")):
+                return c + ".SZ"
+            # 北京: 4, 8 开头
+            if c.startswith(("43", "83", "87")):
+                return c + ".BJ"
+        # 兜底: 不知道的市场, 原样返回
+        return c
+
     async def get_realtime_quote(self, codes: List[str]) -> List[Quote]:
         if not self._initialized:
             raise DataSourceError("tqcenter 未初始化", source=self.name)
 
         results = []
         for code in codes:
+            tq_code = self._to_tq_code(code)
             try:
-                snap = self._tq.get_market_snapshot(code)
+                snap = self._tq.get_market_snapshot(tq_code)
                 if not snap or float(snap.get("Now", 0)) <= 0:
                     raise NotFoundError(f"无法获取 {code} 行情")
-                info = self._stock_info_cache.get(code) or self._safe_stock_info(code)
+                info = self._stock_info_cache.get(code) or self._safe_stock_info(tq_code)
                 now = float(snap.get("Now", 0))
                 last_close = float(snap.get("LastClose", 0))
                 change_pct = ((now - last_close) / last_close * 100) if last_close > 0 else 0
@@ -89,14 +120,14 @@ class TqcenterAdapter(BaseAdapter):
                     name=info.get("Name", ""),
                     price=round(now, 2),
                     change_pct=round(change_pct, 2),
-                    amount=float(snap.get("Amount", 0)),
-                    volume=int(float(snap.get("Volume", 0))),
+                    amount=float(snap.get("Amount", 0)) * 10000,  # 万元 -> 元
+                    volume=int(float(snap.get("Volume", 0))),     # 已经是手
                     open=float(snap.get("Open", 0)),
                     high=float(snap.get("Max", 0)),
                     low=float(snap.get("Min", 0)),
                     last_close=last_close,
-                    bid_5=self._safe_int_list(snap.get("Buyv", []), 5),
-                    ask_5=self._safe_int_list(snap.get("Sellv", []), 5),
+                    bid_5=self._safe_int_list(snap.get("Buyv", []), 5),  # 已经是手
+                    ask_5=self._safe_int_list(snap.get("Sellv", []), 5),  # 已经是手
                     timestamp=pd.Timestamp.now().to_pydatetime(),
                     source=self.name,
                 ))
@@ -120,8 +151,9 @@ class TqcenterAdapter(BaseAdapter):
 
         try:
             category = self._PERIOD_MAP[period]
+            tq_code = self._to_tq_code(code)
             # get_security_bars 返回 numpy 结构
-            result = self._tq.get_security_bars(category, 0, code, 0, count)
+            result = self._tq.get_security_bars(category, 0, tq_code, 0, count)
             if result is None or len(result) == 0:
                 return []
             # result 字段: datetime, open, high, low, close, amount, volume

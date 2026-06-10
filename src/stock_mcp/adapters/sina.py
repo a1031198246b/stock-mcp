@@ -40,10 +40,11 @@ def _parse_sina_line(line: str) -> Optional[Quote]:
     return Quote(
         code=code, name=name, price=round(p, 2),
         change_pct=round(change_pct, 2),
-        amount=float(fields[9] or 0),       # 成交额
-        volume=int(float(fields[8] or 0)),  # 成交量
+        amount=float(fields[9] or 0),              # 成交额 (sina 是元, 直接用)
+        volume=int(float(fields[8] or 0)) // 100,  # 成交量: sina 是股, /100 转手
         open=o, high=h, low=low, last_close=last_close,
-        bid_5=bid_5, ask_5=ask_5,
+        bid_5=[v // 100 for v in bid_5],            # 买量: 股 -> 手
+        ask_5=[v // 100 for v in ask_5],            # 卖量: 股 -> 手
         timestamp=pd.Timestamp.now().to_pydatetime(),
         source="sina",
     )
