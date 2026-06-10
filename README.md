@@ -7,7 +7,7 @@ A 股股票数据 MCP 服务。详见 `E:\claude codeworkspace\docs\superpowers\
 - [x] **P0 脚手架** — 项目结构、配置、日志、MCP server
 - [x] **P1 核心数据** — tqcenter 实时行情 + K 线
 - [x] **P2 多源 + 韧性** — sina/akshare 适配器、缓存、熔断、限流
-- [ ] **P3 扩展数据** — 基本面、资讯、eastmoney
+- [x] **P3 扩展数据** — 基本面、资讯、eastmoney
 - [ ] **P4 高级查询** — iwencai 自然语言选股
 - [ ] **P5 完善** — 文档、CI、覆盖率
 
@@ -54,9 +54,12 @@ uv run pytest --cov=stock_mcp
 | `ping` | 健康检查 |
 | `get_realtime_quote` | 实时行情 |
 | `get_kline` | K线数据 |
+| `get_fundamental` | 基本面数据 |
+| `get_news` | 资讯公告 |
 
 ## 数据源
 
 - **tqcenter** (priority 1, 主源)：通达信插件，需本地安装
 - **sina** (priority 2)：新浪财经 HTTP
 - **akshare** (priority 3)：开源金融数据库
+- **eastmoney** (priority 4)：东方财富，资讯公告
