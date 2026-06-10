@@ -1,9 +1,14 @@
 import pytest
+import tempfile
+import json
+from pathlib import Path
 from datetime import datetime
-from stock_mcp.services.kline_service import KlineService, InMemoryKlineCache
+from stock_mcp.services.kline_service import KlineService
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
 from stock_mcp.domain.models import Kline
+from stock_mcp.cache.sqlite_cache import SQLiteCache
+from stock_mcp.cache.ttl import TTLCalculator
 
 
 class FakeKlineAdapter(BaseAdapter):
@@ -28,11 +33,21 @@ def make_kline(code="600519", period="1d"):
     )
 
 
+@pytest.fixture
+async def sqlite_cache():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield SQLiteCache(Path(tmpdir) / "test.db")
+
+
+@pytest.fixture
+def ttl_calc():
+    return TTLCalculator()
+
+
 @pytest.mark.asyncio
-async def test_get_kline_caches():
+async def test_get_kline_caches(sqlite_cache, ttl_calc):
     adapter = FakeKlineAdapter([make_kline()])
-    cache = InMemoryKlineCache()
-    svc = KlineService(AdapterRegistry([adapter]), cache)
+    svc = KlineService(AdapterRegistry([adapter]), sqlite_cache, ttl_calc)
 
     await svc.get_kline("600519", "1d", 1)
     await svc.get_kline("600519", "1d", 1)

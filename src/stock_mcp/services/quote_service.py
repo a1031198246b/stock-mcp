@@ -1,60 +1,48 @@
 """行情服务 - 编排缓存 + 多源 fallback"""
+import json
 import time
-from typing import List, Optional, Dict
+from typing import List
 from ..domain.models import Quote
 from ..adapters.registry import AdapterRegistry
-
-
-class InMemoryQuoteCache:
-    """P1 阶段占位 - P2 替换为 SQLite"""
-
-    def __init__(self, ttl_seconds: int = 3):
-        self._store: Dict[str, tuple] = {}  # key -> (quote, expire_at)
-        self._ttl = ttl_seconds
-
-    def _key(self, code: str) -> str:
-        return f"quote:{code}"
-
-    def get(self, code: str) -> Optional[Quote]:
-        item = self._store.get(self._key(code))
-        if not item:
-            return None
-        quote, expire_at = item
-        if time.time() > expire_at:
-            return None
-        return quote
-
-    def set(self, quote: Quote) -> None:
-        self._store[self._key(quote.code)] = (quote, time.time() + self._ttl)
-
-    def clear(self) -> None:
-        self._store.clear()
+from ..cache.sqlite_cache import SQLiteCache
+from ..cache.ttl import TTLCalculator
+from ..domain.errors import DataSourceError
 
 
 class QuoteService:
-    def __init__(self, registry: AdapterRegistry, cache: InMemoryQuoteCache):
+    def __init__(
+        self,
+        registry: AdapterRegistry,
+        cache: SQLiteCache,
+        ttl_calc: TTLCalculator,
+    ):
         self._registry = registry
         self._cache = cache
+        self._ttl_calc = ttl_calc
 
     async def get_realtime_quote(self, codes: List[str]) -> List[Quote]:
-        # 1. 尝试缓存
+        # 1. 查缓存（按桶）
+        bucket = self._ttl_calc.bucket_for("realtime_quote")
         cached = []
         missing = []
         for code in codes:
-            q = self._cache.get(code)
-            if q:
-                cached.append(q)
+            key = f"quote:{code}:{bucket}"
+            val = await self._cache.get(key)
+            if val:
+                cached.append(Quote.model_validate_json(val))
             else:
                 missing.append(code)
 
         if not missing:
             return cached
 
-        # 2. 缓存未命中, 走 registry
+        # 2. 走 registry（多源 fallback）
         fresh = await self._registry.fan_out("get_realtime_quote", codes=missing)
 
         # 3. 写缓存
+        ttl = self._ttl_calc.ttl_seconds("realtime_quote")
         for q in fresh:
-            self._cache.set(q)
+            key = f"quote:{q.code}:{bucket}"
+            await self._cache.set(key, q.model_dump_json(), ttl=ttl)
 
         return cached + fresh

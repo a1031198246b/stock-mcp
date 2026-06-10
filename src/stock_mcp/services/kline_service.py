@@ -1,41 +1,28 @@
 """K线服务"""
-import time
-from typing import List, Dict, Optional
+from typing import List
 from ..domain.models import Kline
 from ..adapters.registry import AdapterRegistry
-
-
-class InMemoryKlineCache:
-    def __init__(self, ttl_seconds: int = 60):
-        self._store: Dict[str, tuple] = {}
-        self._ttl = ttl_seconds
-
-    def _key(self, code: str, period: str) -> str:
-        return f"kline:{code}:{period}"
-
-    def get(self, code: str, period: str) -> Optional[List[Kline]]:
-        item = self._store.get(self._key(code, period))
-        if not item or time.time() > item[1]:
-            return None
-        return item[0]
-
-    def set(self, code: str, period: str, klines: List[Kline]) -> None:
-        self._store[self._key(code, period)] = (klines, time.time() + self._ttl)
-
-    def clear(self):
-        self._store.clear()
+from ..cache.sqlite_cache import SQLiteCache
+from ..cache.ttl import TTLCalculator
 
 
 class KlineService:
-    def __init__(self, registry: AdapterRegistry, cache: InMemoryKlineCache):
+    def __init__(self, registry: AdapterRegistry, cache: SQLiteCache, ttl_calc: TTLCalculator):
         self._registry = registry
         self._cache = cache
+        self._ttl_calc = ttl_calc
 
     async def get_kline(self, code: str, period: str, count: int) -> List[Kline]:
-        cached = self._cache.get(code, period)
-        if cached and len(cached) >= count:
-            return cached[:count]
+        bucket = self._ttl_calc.bucket_for("kline_daily" if period in ("1d", "1w", "1M") else "kline")
+        key = f"kline:{code}:{period}:{bucket}"
+        cached = await self._cache.get(key)
+        if cached:
+            import json
+            data = json.loads(cached)
+            return [Kline.model_validate(item) for item in data]
 
         klines = await self._registry.fan_out("get_kline", code=code, period=period, count=count)
-        self._cache.set(code, period, klines)
+        ttl = self._ttl_calc.ttl_seconds("kline_daily" if period in ("1d", "1w", "1M") else "kline")
+        import json
+        await self._cache.set(key, json.dumps([k.model_dump(mode="json") for k in klines]), ttl=ttl)
         return klines

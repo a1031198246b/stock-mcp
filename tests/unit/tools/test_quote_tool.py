@@ -1,10 +1,14 @@
 import pytest
+import tempfile
+from pathlib import Path
 from datetime import datetime
 from stock_mcp.tools.quote import register
 from stock_mcp.domain.models import Quote
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
-from stock_mcp.services.quote_service import QuoteService, InMemoryQuoteCache
+from stock_mcp.services.quote_service import QuoteService
+from stock_mcp.cache.sqlite_cache import SQLiteCache
+from stock_mcp.cache.ttl import TTLCalculator
 
 
 class FakeAdapter(BaseAdapter):
@@ -32,19 +36,22 @@ async def test_quote_tool_returns_list():
     )
     adapter = FakeAdapter(q)
     registry = AdapterRegistry([adapter])
-    svc = QuoteService(registry, InMemoryQuoteCache())
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cache = SQLiteCache(Path(tmpdir) / "test.db")
+        ttl_calc = TTLCalculator()
+        svc = QuoteService(registry, cache, ttl_calc)
 
-    mcp = FastMCP("test")
-    register(mcp, svc)
+        mcp = FastMCP("test")
+        register(mcp, svc)
 
-    # 通过 tool manager 调用
-    tools = await mcp.list_tools()
-    assert any(t.name == "get_realtime_quote" for t in tools)
+        # 通过 tool manager 调用
+        tools = await mcp.list_tools()
+        assert any(t.name == "get_realtime_quote" for t in tools)
 
-    # 直接调用 tool
-    result = await mcp.call_tool("get_realtime_quote", {"codes": ["600519"]})
-    # FastMCP 3.4.2 返回 ToolResult 对象, 文本在 result.content[0].text
-    text = result.content[0].text
-    assert "600519" in text
-    assert "贵州茅台" in text
-    assert "1500" in text
+        # 直接调用 tool
+        result = await mcp.call_tool("get_realtime_quote", {"codes": ["600519"]})
+        # FastMCP 3.4.2 返回 ToolResult 对象, 文本在 result.content[0].text
+        text = result.content[0].text
+        assert "600519" in text
+        assert "贵州茅台" in text
+        assert "1500" in text

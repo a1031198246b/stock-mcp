@@ -5,23 +5,34 @@ from .config import get_settings
 from .logging_setup import setup_logging
 from .tools import register_all_tools
 from .adapters.tqcenter import TqcenterAdapter
+from .adapters.sina import SinaAdapter
+from .adapters.akshare_source import AkshareAdapter
 from .adapters.registry import AdapterRegistry
-from .services.quote_service import QuoteService, InMemoryQuoteCache
-from .services.kline_service import KlineService, InMemoryKlineCache
+from .cache.sqlite_cache import SQLiteCache
+from .cache.ttl import TTLCalculator
+from .services.quote_service import QuoteService
+from .services.kline_service import KlineService
 
 
 def create_server() -> FastMCP:
     """创建并配置 MCP server"""
     setup_logging()
     mcp = FastMCP("stock-mcp")
+    settings = get_settings()
 
-    # 初始化 tqcenter 适配器
-    tq_adapter = TqcenterAdapter()
-    tq_adapter.initialize()
+    # 缓存
+    cache = SQLiteCache(settings.cache_db_path)
+    ttl_calc = TTLCalculator()
 
-    registry = AdapterRegistry([tq_adapter])
-    quote_service = QuoteService(registry, InMemoryQuoteCache())
-    kline_service = KlineService(registry, InMemoryKlineCache())
+    # 适配器
+    tq = TqcenterAdapter(); tq.initialize()
+    sina = SinaAdapter()
+    akshare = AkshareAdapter()
+    registry = AdapterRegistry([tq, sina, akshare])
+
+    # 服务
+    quote_service = QuoteService(registry, cache, ttl_calc)
+    kline_service = KlineService(registry, cache, ttl_calc)
 
     register_all_tools(
         mcp, quote_service=quote_service, kline_service=kline_service
