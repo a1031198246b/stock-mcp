@@ -2,6 +2,7 @@
 import asyncio
 import os
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -28,3 +29,18 @@ def mock_env(monkeypatch):
     monkeypatch.setenv("LOG_LEVEL", "WARNING")
     monkeypatch.setenv("CACHE_DIR", str(tempfile.gettempdir()))
     yield monkeypatch
+
+
+class _Freezer:
+    """简单的 freezer 助手：通过 time.sleep 推进真实时间。
+
+    注意：本实现并未冻结全局时间，而是真实等待。适用于
+    time.monotonic() 等不受 freezegun 影响的计时源。"""
+
+    def tick(self, seconds: float) -> None:
+        time.sleep(seconds)
+
+
+@pytest.fixture
+def freezer():
+    return _Freezer()
