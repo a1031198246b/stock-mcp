@@ -8,6 +8,7 @@ from .adapters.tqcenter import TqcenterAdapter
 from .adapters.sina import SinaAdapter
 from .adapters.akshare_source import AkshareAdapter
 from .adapters.eastmoney import EastmoneyAdapter
+from .adapters.iwencai import IwencaiAdapter
 from .adapters.registry import AdapterRegistry
 from .cache.sqlite_cache import SQLiteCache
 from .cache.ttl import TTLCalculator
@@ -15,6 +16,7 @@ from .services.quote_service import QuoteService
 from .services.kline_service import KlineService
 from .services.fundamental_service import FundamentalService
 from .services.news_service import NewsService
+from .services.query_service import QueryService
 
 
 def create_server() -> FastMCP:
@@ -30,12 +32,15 @@ def create_server() -> FastMCP:
     sina = SinaAdapter()
     akshare = AkshareAdapter()
     eastmoney = EastmoneyAdapter()
-    registry = AdapterRegistry([tq, sina, akshare, eastmoney])
+    iwencai = IwencaiAdapter(); iwencai.initialize()
+
+    registry = AdapterRegistry([tq, sina, akshare, eastmoney, iwencai])
 
     quote_service = QuoteService(registry, cache, ttl_calc)
     kline_service = KlineService(registry, cache, ttl_calc)
     fundamental_service = FundamentalService(registry, cache, ttl_calc)
     news_service = NewsService(registry, cache, ttl_calc)
+    query_service = QueryService(iwencai)
 
     register_all_tools(
         mcp,
@@ -43,6 +48,7 @@ def create_server() -> FastMCP:
         kline_service=kline_service,
         fundamental_service=fundamental_service,
         news_service=news_service,
+        query_service=query_service,
     )
     return mcp
 
