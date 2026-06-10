@@ -1,4 +1,3 @@
-import pytest
 from stock_mcp.domain.errors import (
     StockMCPError,
     DataSourceError,

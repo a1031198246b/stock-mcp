@@ -1,8 +1,6 @@
 import pytest
 import respx
-import json
 from stock_mcp.adapters.eastmoney import EastmoneyAdapter
-from datetime import datetime
 
 
 @pytest.mark.asyncio

@@ -3,7 +3,7 @@ import re
 from typing import List, Optional
 import httpx
 import pandas as pd
-from ..domain.models import Quote, Kline, Fundamental, NewsItem
+from ..domain.models import Quote
 from ..domain.errors import DataSourceError, ParseError
 from .base import BaseAdapter
 
@@ -28,8 +28,8 @@ def _parse_sina_line(line: str) -> Optional[Quote]:
 
     code = symbol[2:]  # 去掉 sh/sz
     name = fields[0]
-    o, l_close, p, h, low = (float(fields[1]), float(fields[2]),
-                             float(fields[3]), float(fields[4]), float(fields[5]))
+    o, _, p, h, low = (float(fields[1]), float(fields[2]),
+                       float(fields[3]), float(fields[4]), float(fields[5]))
     last_close = float(fields[2])
     change_pct = ((p - last_close) / last_close * 100) if last_close > 0 else 0
 

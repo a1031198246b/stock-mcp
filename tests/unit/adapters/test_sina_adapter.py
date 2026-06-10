@@ -3,7 +3,6 @@ import pytest
 import respx
 from stock_mcp.adapters.sina import SinaAdapter
 from stock_mcp.domain.errors import DataSourceError, ParseError
-from datetime import datetime
 from pathlib import Path
 
 

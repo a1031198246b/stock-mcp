@@ -46,7 +46,7 @@ class CircuitBreaker:
                 result = await ret
             else:
                 result = ret  # type: ignore[assignment]
-        except Exception as e:
+        except Exception:
             await self.record_failure()
             raise
 

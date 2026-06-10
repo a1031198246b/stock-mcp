@@ -1,6 +1,5 @@
 """全局 pytest fixtures"""
 import asyncio
-import os
 import tempfile
 import time
 from pathlib import Path

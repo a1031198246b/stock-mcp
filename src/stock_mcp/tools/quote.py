@@ -1,5 +1,4 @@
 """行情类 MCP 工具"""
-from datetime import datetime
 from typing import List
 from fastmcp import FastMCP
 from ..services.quote_service import QuoteService

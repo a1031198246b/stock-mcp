@@ -1,7 +1,6 @@
 import pytest
 from stock_mcp.adapters.base import BaseAdapter
-from stock_mcp.domain.models import Quote, Kline, Fundamental, NewsItem, StockQueryResult
-from stock_mcp.domain.errors import DataSourceError
+from stock_mcp.domain.models import Quote
 
 
 class DummyAdapter(BaseAdapter):

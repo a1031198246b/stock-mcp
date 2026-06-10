@@ -1,8 +1,8 @@
 import sys
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from stock_mcp.adapters.iwencai import IwencaiAdapter
-from stock_mcp.domain.errors import AuthError, DataSourceError
+from stock_mcp.domain.errors import AuthError
 
 
 class FakePywencaiModule:

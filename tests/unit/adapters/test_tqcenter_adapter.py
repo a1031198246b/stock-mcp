@@ -1,9 +1,8 @@
 import sys
 import pytest
-from unittest.mock import MagicMock, AsyncMock
-from datetime import datetime
+from unittest.mock import MagicMock
 from stock_mcp.adapters.tqcenter import TqcenterAdapter
-from stock_mcp.domain.errors import DataSourceError, AuthError
+from stock_mcp.domain.errors import DataSourceError
 
 
 class FakeTqModule:
@@ -127,6 +126,5 @@ async def test_get_kline_invalid_period(fake_tqcenter, monkeypatch):
     monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
     a = TqcenterAdapter()
     a.initialize()
-    from stock_mcp.domain.errors import DataSourceError
     with pytest.raises(DataSourceError):
         await a.get_kline("600519", "2y", 10)

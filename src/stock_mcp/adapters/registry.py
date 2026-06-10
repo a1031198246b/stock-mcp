@@ -1,5 +1,5 @@
 """适配器注册表 - 负责优先级排序、fan-out fallback"""
-from typing import List, Callable, Awaitable, Any
+from typing import List, Any
 from ..domain.errors import DataSourceError
 from .base import BaseAdapter
 

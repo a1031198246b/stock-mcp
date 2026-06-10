@@ -1,12 +1,9 @@
 """行情服务 - 编排缓存 + 多源 fallback"""
-import json
-import time
 from typing import List
 from ..domain.models import Quote
 from ..adapters.registry import AdapterRegistry
 from ..cache.sqlite_cache import SQLiteCache
 from ..cache.ttl import TTLCalculator
-from ..domain.errors import DataSourceError
 
 
 class QuoteService:

@@ -1,8 +1,7 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import pandas as pd
 from stock_mcp.adapters.akshare_source import AkshareAdapter
-from stock_mcp.domain.errors import DataSourceError
 
 
 @pytest.fixture

@@ -1,5 +1,4 @@
 import pytest
-import os
 import tempfile
 from pathlib import Path
 from datetime import datetime

@@ -1,7 +1,7 @@
 import pytest
 import time
 from stock_mcp.cache.sqlite_cache import SQLiteCache
-from stock_mcp.domain.models import Quote, Kline
+from stock_mcp.domain.models import Quote
 from datetime import datetime
 
 

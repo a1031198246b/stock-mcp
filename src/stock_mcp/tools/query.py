@@ -23,7 +23,7 @@ def register(mcp: FastMCP, service: QueryService) -> None:
             return f"❌ 查询失败: {e}"
 
         if not results:
-            return f"❌ 未找到符合条件的股票"
+            return "❌ 未找到符合条件的股票"
 
         lines = [
             f"**查询条件: {condition}**",

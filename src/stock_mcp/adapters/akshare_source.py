@@ -69,7 +69,7 @@ class AkshareAdapter(BaseAdapter):
         if ak is None:
             return []
         try:
-            df = ak.stock_news_em(symbol=code)
+            ak.stock_news_em(symbol=code)
         except Exception as e:
             raise DataSourceError(str(e), source=self.name)
         # P3 阶段再细化

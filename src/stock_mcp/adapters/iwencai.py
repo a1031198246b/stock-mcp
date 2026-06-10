@@ -2,11 +2,11 @@
 
 依赖: pywencai (需 Node.js 16+)
 """
-from typing import List, Optional
+from typing import List
 import pandas as pd
 from ..config import get_settings
 from ..domain.models import (
-    Quote, Kline, Fundamental, NewsItem, StockQueryResult,
+    StockQueryResult,
 )
 from ..domain.errors import DataSourceError, AuthError
 from .base import BaseAdapter

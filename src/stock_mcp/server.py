@@ -1,5 +1,4 @@
 """MCP Server 入口 - stdio 模式"""
-import sys
 from fastmcp import FastMCP
 from .config import get_settings
 from .logging_setup import setup_logging
@@ -28,11 +27,13 @@ def create_server() -> FastMCP:
     cache = SQLiteCache(settings.cache_db_path)
     ttl_calc = TTLCalculator()
 
-    tq = TqcenterAdapter(); tq.initialize()
+    tq = TqcenterAdapter()
+    tq.initialize()
     sina = SinaAdapter()
     akshare = AkshareAdapter()
     eastmoney = EastmoneyAdapter()
-    iwencai = IwencaiAdapter(); iwencai.initialize()
+    iwencai = IwencaiAdapter()
+    iwencai.initialize()
 
     registry = AdapterRegistry([tq, sina, akshare, eastmoney, iwencai])
 

@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 from stock_mcp.ratelimit.token_bucket import TokenBucket
 

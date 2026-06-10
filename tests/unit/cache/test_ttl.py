@@ -1,4 +1,3 @@
-import time
 from stock_mcp.cache.ttl import TTLCalculator, TTLConfig
 
 

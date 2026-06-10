@@ -1,7 +1,7 @@
 import pytest
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
-from stock_mcp.domain.models import Quote, Kline, Fundamental, NewsItem
+from stock_mcp.domain.models import Quote
 from datetime import datetime
 from stock_mcp.domain.errors import DataSourceError
 
@@ -42,9 +42,6 @@ async def test_registry_sorts_by_priority():
 
 @pytest.mark.asyncio
 async def test_fallback_to_second_when_first_fails():
-    q1 = [Quote(code="1", name="x", price=1, change_pct=0, amount=0,
-                volume=0, open=1, high=1, low=1, last_close=1,
-                bid_5=[0]*5, ask_5=[0]*5, timestamp=datetime.now(), source="a1")]
     q2 = [Quote(code="1", name="x", price=2, change_pct=0, amount=0,
                 volume=0, open=1, high=1, low=1, last_close=1,
                 bid_5=[0]*5, ask_5=[0]*5, timestamp=datetime.now(), source="a2")]

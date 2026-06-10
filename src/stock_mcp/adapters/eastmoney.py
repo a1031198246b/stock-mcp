@@ -2,7 +2,7 @@
 from typing import List
 import httpx
 import pandas as pd
-from ..domain.models import Quote, Kline, Fundamental, NewsItem
+from ..domain.models import NewsItem
 from ..domain.errors import DataSourceError
 from .base import BaseAdapter
 

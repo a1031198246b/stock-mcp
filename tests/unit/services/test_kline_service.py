@@ -1,6 +1,5 @@
 import pytest
 import tempfile
-import json
 from pathlib import Path
 from datetime import datetime
 from stock_mcp.services.kline_service import KlineService

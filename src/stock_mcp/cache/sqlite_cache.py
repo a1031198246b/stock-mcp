@@ -4,7 +4,6 @@ import fnmatch
 import aiosqlite
 from pathlib import Path
 from typing import Optional
-from ..domain.errors import CacheError
 from ..logging_setup import get_logger
 
 log = get_logger(__name__)
