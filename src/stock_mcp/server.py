@@ -14,6 +14,7 @@ from .cache.ttl import TTLCalculator
 from .services.quote_service import QuoteService
 from .services.kline_service import KlineService
 from .services.fundamental_service import FundamentalService
+from .services.news_service import NewsService
 
 
 def create_server() -> FastMCP:
@@ -34,12 +35,14 @@ def create_server() -> FastMCP:
     quote_service = QuoteService(registry, cache, ttl_calc)
     kline_service = KlineService(registry, cache, ttl_calc)
     fundamental_service = FundamentalService(registry, cache, ttl_calc)
+    news_service = NewsService(registry, cache, ttl_calc)
 
     register_all_tools(
         mcp,
         quote_service=quote_service,
         kline_service=kline_service,
         fundamental_service=fundamental_service,
+        news_service=news_service,
     )
     return mcp
 

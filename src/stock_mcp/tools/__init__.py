@@ -1,9 +1,10 @@
 """MCP Tools 注册中心"""
 from fastmcp import FastMCP
-from . import admin, quote, kline, fundamental
+from . import admin, quote, kline, fundamental, news
 
 
-def register_all_tools(mcp: FastMCP, quote_service=None, kline_service=None, fundamental_service=None) -> None:
+def register_all_tools(mcp: FastMCP, quote_service=None, kline_service=None,
+                       fundamental_service=None, news_service=None) -> None:
     """注册所有 MCP tools"""
     admin.register(mcp)
     if quote_service is not None:
@@ -12,4 +13,6 @@ def register_all_tools(mcp: FastMCP, quote_service=None, kline_service=None, fun
         kline.register(mcp, kline_service)
     if fundamental_service is not None:
         fundamental.register(mcp, fundamental_service)
-    # 后续阶段加: news, query
+    if news_service is not None:
+        news.register(mcp, news_service)
+    # 后续阶段加: query
