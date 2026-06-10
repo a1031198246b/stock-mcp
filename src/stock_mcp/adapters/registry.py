@@ -43,12 +43,24 @@ class AdapterRegistry:
             method = getattr(adapter, method_name)
             try:
                 result = await method(*args, **kwargs)
-                self.mark_healthy(adapter.name)
-                return result
             except Exception as e:
                 errors.append((adapter.name, e))
                 # 连续失败不直接熔断, 让 Service 层处理
                 continue
+
+            # 调用成功, 但要区分"真无数据" vs "没实现"
+            # 列表类型: 空列表 = 真无数据, 应继续 fallback
+            # None/其他 falsy: 视为真无数据
+            if isinstance(result, list) and len(result) == 0:
+                errors.append((adapter.name, "empty result"))
+                continue
+            if result is None:
+                errors.append((adapter.name, "None result"))
+                continue
+
+            # 有数据, 返回
+            self.mark_healthy(adapter.name)
+            return result
 
         # 全部失败
         if errors:
