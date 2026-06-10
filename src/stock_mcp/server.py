@@ -7,6 +7,7 @@ from .tools import register_all_tools
 from .adapters.tqcenter import TqcenterAdapter
 from .adapters.registry import AdapterRegistry
 from .services.quote_service import QuoteService, InMemoryQuoteCache
+from .services.kline_service import KlineService, InMemoryKlineCache
 
 
 def create_server() -> FastMCP:
@@ -20,8 +21,11 @@ def create_server() -> FastMCP:
 
     registry = AdapterRegistry([tq_adapter])
     quote_service = QuoteService(registry, InMemoryQuoteCache())
+    kline_service = KlineService(registry, InMemoryKlineCache())
 
-    register_all_tools(mcp, quote_service=quote_service)
+    register_all_tools(
+        mcp, quote_service=quote_service, kline_service=kline_service
+    )
     return mcp
 
 

@@ -106,9 +106,57 @@ class TqcenterAdapter(BaseAdapter):
                 raise DataSourceError(str(e), source=self.name)
         return results
 
+    # 周期映射: tqcenter 协议 → 分钟数
+    _PERIOD_MAP = {
+        "1m": 1, "5m": 5, "15m": 15, "30m": 30, "60m": 60,
+        "1h": 60, "1d": 0, "1w": -1, "1M": -2,
+    }
+
     async def get_kline(self, code: str, period: str, count: int) -> List[Kline]:
-        """P1 阶段先返回空，P3 实现"""
-        return []
+        if not self._initialized:
+            raise DataSourceError("tqcenter 未初始化", source=self.name)
+        if period not in self._PERIOD_MAP:
+            raise DataSourceError(f"不支持的 period: {period}", source=self.name)
+
+        try:
+            category = self._PERIOD_MAP[period]
+            # get_security_bars 返回 numpy 结构
+            result = self._tq.get_security_bars(category, 0, code, 0, count)
+            if result is None or len(result) == 0:
+                return []
+            # result 字段: datetime, open, high, low, close, amount, volume
+            klines = []
+            for bar in result:
+                # datetime 可能是 int (yyyyMMddHHmm) 或 pandas Timestamp
+                dt = bar['datetime']
+                if isinstance(dt, (int, float)) and dt > 1e10:
+                    # yyyyMMddHHmm 格式
+                    import datetime as _dt
+                    year = int(dt // 100000000)
+                    month = int((dt // 1000000) % 100)
+                    day = int((dt // 10000) % 100)
+                    hour = int((dt // 100) % 100)
+                    minute = int(dt % 100)
+                    dt_obj = _dt.datetime(year, month, day, hour, minute)
+                else:
+                    dt_obj = pd.Timestamp(dt).to_pydatetime()
+                klines.append(Kline(
+                    code=code.split(".")[0],
+                    period=period,
+                    datetime=dt_obj,
+                    open=float(bar['open']),
+                    high=float(bar['high']),
+                    low=float(bar['low']),
+                    close=float(bar['close']),
+                    volume=int(bar['vol']),
+                    amount=float(bar['amount']),
+                    source=self.name,
+                ))
+            return klines
+        except DataSourceError:
+            raise
+        except Exception as e:
+            raise DataSourceError(str(e), source=self.name)
 
     async def get_fundamental(self, code: str) -> Optional[Fundamental]:
         """P1 阶段先返回 None"""
