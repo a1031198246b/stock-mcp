@@ -123,8 +123,11 @@ async def test_get_kline_hk(monkeypatch, fake_yfinance):
     assert klines[0].market == "hk"
     fake_yfinance.Ticker.assert_called_with("0700.HK")
     # history 调用的 period/interval 参数
+    from stock_mcp.adapters.yfinance_source import _PERIOD_MAP
     call = fake_yfinance.Ticker.return_value.history.call_args
-    assert call.kwargs.get("period") == "3mo" or "1d" in str(call)
+    assert call.kwargs.get("period") in _PERIOD_MAP.values(), (
+        f"Expected period in {_PERIOD_MAP.values()}, got {call.kwargs.get('period')}"
+    )
 
 
 @pytest.mark.asyncio
