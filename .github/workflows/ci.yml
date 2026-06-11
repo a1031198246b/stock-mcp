@@ -33,7 +33,11 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
       - name: Run pytest with coverage
-        run: uv run pytest --cov=stock_mcp --cov-report=term-missing --cov-fail-under=90
+        # Use `python -m pytest` (not bare `pytest`) to avoid the
+        # "Failed to spawn: pytest" error seen when uv's PATH resolution
+        # doesn't find the console script in the venv created by
+        # astral-sh/setup-uv@v3.
+        run: uv run python -m pytest --cov=stock_mcp --cov-report=term-missing --cov-fail-under=90
         env:
           TDX_PATH: ""
 

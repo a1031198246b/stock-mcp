@@ -407,6 +407,7 @@ def test_initialize_returns_early_when_tdx_path_unset(monkeypatch):
     对象返回 tdx_path=""
     """
     from unittest.mock import MagicMock
+
     from stock_mcp.adapters import tqcenter as tqcenter_mod
 
     fake_settings = MagicMock()
