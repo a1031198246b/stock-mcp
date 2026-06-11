@@ -12,6 +12,9 @@
 - **文档更新**:
   - README: 状态更新, P3 标记完成, 加"已知限制"章节
   - DATA_SOURCES: tqcenter 覆盖范围更新, 加 PE 偏差和锁状态警告
+- **GitHub Actions CI** (`.github/workflows/ci.yml`): 3 个 job, lint (ruff) + test (pytest + 覆盖率 ≥ 90%, 3.11/3.12 矩阵) + typecheck (mypy, 渐进式 continue-on-error). 集成测试通过 TDX_PATH="" 自动 skip.
+- **ruff 配置** (`pyproject.toml`): `[tool.ruff]` + `[tool.ruff.format]`, 全项目已格式化.
+- **mypy 配置** (`pyproject.toml`): `[tool.mypy]` strict 模式, 当前非阻塞, 修完错误后升级.
 
 ### 测试
 - 116 passed, 13 skipped, 89% 总体覆盖率
