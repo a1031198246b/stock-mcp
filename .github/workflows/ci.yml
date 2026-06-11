@@ -16,7 +16,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
-      - run: uv sync --all-extras
+      - run: uv sync --extra dev
       - run: uv run ruff check .
       - run: uv run ruff format --check .
 
@@ -32,11 +32,17 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
+      - name: Sync dev dependencies
+        # Use explicit `--extra dev` (not `--all-extras`) because
+        # the previous attempt with --all-extras installed 80 packages
+        # but did NOT include dev extras like pytest. This may be a
+        # quirk of how astral-sh/setup-uv@v3 handles the optional
+        # dependency groups in CI.
+        run: uv sync --extra dev
       - name: Run pytest with coverage
         # Use `python -m pytest` (not bare `pytest`) to avoid the
         # "Failed to spawn: pytest" error seen when uv's PATH resolution
-        # doesn't find the console script in the venv created by
-        # astral-sh/setup-uv@v3.
+        # doesn't find the console script in the venv.
         run: uv run python -m pytest --cov=stock_mcp --cov-report=term-missing --cov-fail-under=90
         env:
           TDX_PATH: ""
@@ -50,5 +56,5 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
-      - run: uv sync --all-extras
+      - run: uv sync --extra dev
       - run: uv run mypy src/stock_mcp
