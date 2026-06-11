@@ -85,5 +85,5 @@ files = ["src/stock_mcp"]
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
-module = ["fastmcp.*", "aiosqlite.*", "pandas.*", "respx.*", "freezegun.*", "ctypes.*"]
+module = ["fastmcp.*", "aiosqlite.*", "pandas.*", "structlog.*", "respx.*", "freezegun.*", "ctypes.*"]
 ignore_missing_imports = true
