@@ -20,8 +20,6 @@ def register(mcp: FastMCP, service: FundamentalService) -> None:
             fund = await service.get_fundamental(code)
         except DataSourceError as e:
             return f"❌ 基本面获取失败: {e}"
-        if fund is None:
-            return f"❌ 未找到 {code} 基本面数据"
 
         return (
             f"**{fund.code} {fund.name} 基本面数据**\n"

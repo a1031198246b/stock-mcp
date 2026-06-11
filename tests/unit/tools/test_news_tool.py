@@ -113,9 +113,3 @@ async def test_news_tool_handles_data_source_error():
         text = result.content[0].text
         assert "❌" in text
         assert "资讯获取失败" in text
-
-
-# Note: tool 的 `if not items:` 分支在当前 service/registry 架构下不可达:
-# - NewsService.get_news() 把 registry.fan_out 结果原样返回
-# - registry.fan_out 收到空列表视为"适配器失败", 全部失败抛 DataSourceError
-# - 因此空列表情况实际走 except DataSourceError 分支, tool 的 if not items 分支是死代码

@@ -110,11 +110,3 @@ async def test_fundamental_tool_handles_data_source_error():
         text = result.content[0].text
         assert "❌" in text
         assert "基本面获取失败" in text
-
-
-# Note: tool 的 `if fund is None:` 分支在当前 service/registry 架构下不可达:
-# - FundamentalService.get_fundamental() 把 registry.fan_out 的结果原样返回
-# - registry.fan_out 收到 None 会视为"适配器失败"继续 fallback, 全部失败抛 DataSourceError
-# - 因此 None 情况实际走的是 except DataSourceError 分支, tool 的 None 分支是死代码
-# 跳过对该分支的覆盖测试, 已通过 test_fundamental_tool_handles_data_source_error 覆盖
-# 主要错误路径.

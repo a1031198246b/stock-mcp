@@ -22,9 +22,6 @@ def register(mcp: FastMCP, service: QuoteService) -> None:
         except DataSourceError as e:
             return f"❌ 数据获取失败: {e}\n请检查网络或稍后重试"
 
-        if not quotes:
-            return f"❌ 未找到数据: {codes}"
-
         # Markdown 表格
         lines = [
             "| 代码 | 名称 | 价格 | 涨跌幅(%) | 成交额(亿) | 成交量(手) | 买一量 | 卖一量 | 数据源 |",

@@ -22,9 +22,6 @@ def register(mcp: FastMCP, service: NewsService) -> None:
         except DataSourceError as e:
             return f"❌ 资讯获取失败: {e}"
 
-        if not items:
-            return f"❌ {code} 暂无资讯"
-
         lines = [
             f"**{code} 资讯公告（共 {len(items)} 条）**",
             "",
