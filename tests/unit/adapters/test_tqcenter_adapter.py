@@ -375,3 +375,70 @@ async def test_get_kline_invalid_period(fake_tqcenter, monkeypatch):
     a.initialize()
     with pytest.raises(DataSourceError):
         await a.get_kline("600519", "2y", 10)
+
+
+# ============== 覆盖率补足测试 (CI 在 TDX_PATH="" 下需 ≥ 90%) ==============
+
+
+@pytest.mark.asyncio
+async def test_health_check_returns_false_when_not_initialized():
+    """未初始化时 health_check 应当直接返回 False (不访问 tq)"""
+    a = TqcenterAdapter()
+    # _initialized = False
+    assert await a.health_check() is False
+
+
+def test_initialize_returns_early_when_already_initialized(fake_tqcenter, monkeypatch):
+    """二次 initialize 应提前 return, 不重复调底层 init"""
+    monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
+    a = TqcenterAdapter()
+    a.initialize()
+    call_count_after_first = fake_tqcenter.tq.initialize.call_count
+    # 再次 init → 应 early-return
+    a.initialize()
+    assert fake_tqcenter.tq.initialize.call_count == call_count_after_first
+
+
+def test_initialize_returns_early_when_tdx_path_unset(monkeypatch):
+    """TDX_PATH 为空 → initialize 直接 return, 保持 disabled"""
+    monkeypatch.delenv("TDX_PATH", raising=False)
+    # 显式清掉 settings 单例, 避免其他测试污染
+    from stock_mcp.config import reset_settings
+
+    reset_settings()
+    try:
+        a = TqcenterAdapter()
+        a.initialize()
+        assert a._initialized is False
+        assert a.enabled is False
+    finally:
+        # 还原, 避免影响后续测试
+        reset_settings()
+
+
+def test_to_tq_code_keeps_existing_dot_suffix():
+    """已带 .SH/.SZ/.BJ 后缀的代码, _to_tq_code 应原样返回"""
+    assert TqcenterAdapter._to_tq_code("600519.SH") == "600519.SH"
+    assert TqcenterAdapter._to_tq_code("000001.SZ") == "000001.SZ"
+
+
+def test_to_tq_code_strips_sh_sz_bj_prefix():
+    """带 SH/SZ/BJ 前缀 (无点) → 应去掉前缀, 然后按 6 位代码加后缀"""
+    assert TqcenterAdapter._to_tq_code("SH600519") == "600519.SH"
+    assert TqcenterAdapter._to_tq_code("SZ000001") == "000001.SZ"
+
+
+def test_to_tq_code_adds_bj_suffix():
+    """北京 (43/83/87 开头) 代码应加 .BJ 后缀"""
+    assert TqcenterAdapter._to_tq_code("830001") == "830001.BJ"
+    assert TqcenterAdapter._to_tq_code("430001") == "430001.BJ"
+
+
+def test_safe_int_list_handles_short_and_garbage_input():
+    """_safe_int_list: 不足 5 个 / 异常元素 → 用 0 兜底"""
+    # 长度不足 → 缺位补 0
+    assert TqcenterAdapter._safe_int_list([1, 2], 5) == [1, 2, 0, 0, 0]
+    # 异常元素 (字符串非数字) → 0
+    assert TqcenterAdapter._safe_int_list(["x", "y", "z"], 3) == [0, 0, 0]
+    # 全 None → 全 0
+    assert TqcenterAdapter._safe_int_list([None, None, None, None, None], 5) == [0, 0, 0, 0, 0]
