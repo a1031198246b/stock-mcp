@@ -34,12 +34,16 @@ def mock_adapters(monkeypatch, temp_cache_dir, mock_env):
     akshare_mock = _make_mock_adapter_class("akshare")
     eastmoney_mock = _make_mock_adapter_class("eastmoney")
     iwencai_mock = _make_mock_adapter_class("iwencai")
+    bao_mock = _make_mock_adapter_class("baostock")
+    yf_mock = _make_mock_adapter_class("yfinance")
 
     monkeypatch.setattr("stock_mcp.server.TqcenterAdapter", tq_mock)
     monkeypatch.setattr("stock_mcp.server.SinaAdapter", sina_mock)
     monkeypatch.setattr("stock_mcp.server.AkshareAdapter", akshare_mock)
     monkeypatch.setattr("stock_mcp.server.EastmoneyAdapter", eastmoney_mock)
     monkeypatch.setattr("stock_mcp.server.IwencaiAdapter", iwencai_mock)
+    monkeypatch.setattr("stock_mcp.server.BaostockAdapter", bao_mock)
+    monkeypatch.setattr("stock_mcp.server.YfinanceAdapter", yf_mock)
 
     # 设置缓存目录到临时目录, 避免污染工作区
     monkeypatch.setenv("CACHE_DIR", str(temp_cache_dir))
@@ -51,6 +55,8 @@ def mock_adapters(monkeypatch, temp_cache_dir, mock_env):
         "akshare": akshare_mock,
         "eastmoney": eastmoney_mock,
         "iwencai": iwencai_mock,
+        "baostock": bao_mock,
+        "yfinance": yf_mock,
     }
 
 
@@ -85,6 +91,23 @@ def test_create_server_registers_ping_tool(mock_adapters):
     assert "ping" in names
 
 
+def test_create_server_registers_baostock_and_yfinance(mock_adapters):
+    """server 应该装配 baostock + yfinance 适配器"""
+    from stock_mcp.server import create_server
+    from fastmcp import FastMCP
+    mcp = create_server()
+    assert isinstance(mcp, FastMCP)
+    # 验证 baostock / yfinance 适配器已注册 (通过 list_tools 看)
+    import asyncio
+    tools = asyncio.run(mcp.list_tools())
+    tool_names = {t.name for t in tools}
+    # financial_statement 应该被注册
+    # (具体 tool name 由 Task 8 step 4 决定)
+    assert "get_financial_statement" in tool_names, (
+        f"get_financial_statement not registered. Tools: {tool_names}"
+    )
+
+
 def test_create_server_registers_all_data_tools(mock_adapters):
     """create_server() 应注册所有数据类工具"""
     import asyncio
@@ -108,7 +131,7 @@ def test_create_server_registers_all_data_tools(mock_adapters):
 
 
 def test_create_server_passes_all_adapters_to_registry(mock_adapters):
-    """AdapterRegistry 应收到 5 个适配器实例"""
+    """AdapterRegistry 应收到 7 个适配器实例 (含 baostock + yfinance)"""
     from stock_mcp.server import create_server
 
     # 通过 patch AdapterRegistry 抓取构造参数
@@ -124,7 +147,7 @@ def test_create_server_passes_all_adapters_to_registry(mock_adapters):
         create_server()
 
     assert "adapters" in captured
-    assert len(captured["adapters"]) == 5
+    assert len(captured["adapters"]) == 7
 
 
 def test_main_runs_server_with_stdio_transport(mock_adapters):

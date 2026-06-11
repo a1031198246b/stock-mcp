@@ -3,11 +3,13 @@
 from fastmcp import FastMCP
 
 from .adapters.akshare_source import AkshareAdapter
+from .adapters.baostock_source import BaostockAdapter
 from .adapters.eastmoney import EastmoneyAdapter
 from .adapters.iwencai import IwencaiAdapter
 from .adapters.registry import AdapterRegistry
 from .adapters.sina import SinaAdapter
 from .adapters.tqcenter import TqcenterAdapter
+from .adapters.yfinance_source import YfinanceAdapter
 from .cache.sqlite_cache import SQLiteCache
 from .cache.ttl import TTLCalculator
 from .config import get_settings
@@ -36,8 +38,10 @@ def create_server() -> FastMCP:
     eastmoney = EastmoneyAdapter()
     iwencai = IwencaiAdapter()
     iwencai.initialize()
+    bao = BaostockAdapter()
+    yf = YfinanceAdapter()
 
-    registry = AdapterRegistry([tq, sina, akshare, eastmoney, iwencai])
+    registry = AdapterRegistry([tq, sina, akshare, eastmoney, iwencai, bao, yf])
 
     quote_service = QuoteService(registry, cache, ttl_calc)
     kline_service = KlineService(registry, cache, ttl_calc)
@@ -52,6 +56,7 @@ def create_server() -> FastMCP:
         fundamental_service=fundamental_service,
         news_service=news_service,
         query_service=query_service,
+        baostock_adapter=bao,
     )
     return mcp
 
