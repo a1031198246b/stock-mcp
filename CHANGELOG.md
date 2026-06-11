@@ -17,7 +17,7 @@
 - **mypy 配置** (`pyproject.toml`): `[tool.mypy]` strict 模式, 当前非阻塞, 修完错误后升级.
 
 ### 测试
-- 116 passed, 13 skipped, 89% 总体覆盖率
+- 139 passed, 16 skipped, 91% 总体覆盖率 (CI 验证)
 - 18 个 tqcenter 单元测试全过
 - 10 个 tdxcenter 集成测试全过 (需 TDX 重启后)
 - TDX 端运行时验证: 茅台 PE 14.64 / PB 5.9 / ROE 10.06% / 市值 15957.29 亿
