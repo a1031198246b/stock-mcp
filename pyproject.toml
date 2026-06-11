@@ -77,3 +77,13 @@ ignore = [
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src/stock_mcp"]
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["fastmcp.*", "aiosqlite.*", "pandas.*", "respx.*", "freezegun.*", "ctypes.*"]
+ignore_missing_imports = true
