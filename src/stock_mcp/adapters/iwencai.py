@@ -46,9 +46,7 @@ class IwencaiAdapter(BaseAdapter):
 
     async def query_stocks(self, condition: str) -> list[StockQueryResult]:
         if not self.enabled:
-            raise DataSourceError(
-                "iwencai 未启用 (pywencai 未安装)", source=self.name
-            )
+            raise DataSourceError("iwencai 未启用 (pywencai 未安装)", source=self.name)
         settings = get_settings()
         # 把空串 (常见于 .env 里留 ``IWENCAI_COOKIE=``) 也视为未配置
         cookie = settings.iwencai_cookie or None
@@ -62,9 +60,7 @@ class IwencaiAdapter(BaseAdapter):
             msg = str(e)
             # 仅当 cookie 已配置且 pywencai 提示登录/cookie 相关错误时,
             # 才视为认证问题. 匿名模式下出现的错误归类为数据源错误.
-            if cookie and (
-                "登录" in msg or "cookie" in msg.lower() or "expired" in msg.lower()
-            ):
+            if cookie and ("登录" in msg or "cookie" in msg.lower() or "expired" in msg.lower()):
                 raise AuthError(msg, source=self.name) from e
             raise DataSourceError(msg, source=self.name) from e
 

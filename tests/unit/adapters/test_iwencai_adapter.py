@@ -45,9 +45,7 @@ async def test_initialize_disabled_when_pywencai_not_installed(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_query_stocks_passes_none_cookie_when_unconfigured(
-    fake_pywencai, monkeypatch
-):
+async def test_query_stocks_passes_none_cookie_when_unconfigured(fake_pywencai, monkeypatch):
     """未配置 cookie 时, 应该把 cookie=None 透传给 pywencai."""
     monkeypatch.delenv("IWENCAI_COOKIE", raising=False)
     fake_pywencai.get.return_value = pd.DataFrame(
