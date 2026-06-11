@@ -8,16 +8,17 @@ from ..services.fundamental_service import FundamentalService
 
 def register(mcp: FastMCP, service: FundamentalService) -> None:
     @mcp.tool()
-    async def get_fundamental(code: str) -> str:
+    async def get_fundamental(code: str, market: str = "a_stock") -> str:
         """获取个股基本面数据
 
         Args:
-            code: 股票代码
+            code: 股票代码，如 "600519" (A 股) / "00700" (港股) / "AAPL" (美股)
+            market: 市场, "a_stock" (默认) / "hk" / "us"
         Returns:
             Markdown 格式
         """
         try:
-            fund = await service.get_fundamental(code)
+            fund = await service.get_fundamental(code, market=market)
         except DataSourceError as e:
             return f"❌ 基本面获取失败: {e}"
 

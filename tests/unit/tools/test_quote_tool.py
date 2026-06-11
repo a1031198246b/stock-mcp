@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from fastmcp import FastMCP
 
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
@@ -118,3 +119,43 @@ async def test_quote_tool_handles_data_source_error():
         text = result.content[0].text
         assert "❌" in text
         assert "数据获取失败" in text
+
+
+@pytest.mark.asyncio
+async def test_quote_tool_forwards_market_to_service(temp_cache_dir):
+    """tool 应该把 market 参数透传给 service。"""
+    from unittest.mock import AsyncMock
+
+    svc = AsyncMock()
+    svc.get_realtime_quote.return_value = [
+        Quote(
+            code="AAPL",
+            name="AAPL",
+            price=200.0,
+            change_pct=1.0,
+            amount=1e9,
+            volume=10000,
+            open=199,
+            high=201,
+            low=198,
+            last_close=198,
+            bid_5=[10] * 5,
+            ask_5=[11] * 5,
+            timestamp=datetime(2026, 6, 11),
+            source="fake",
+            market="us",
+        )
+    ]
+
+    mcp = FastMCP("test")
+    register(mcp, svc)
+
+    # 传 market="us"
+    result = await mcp.call_tool(
+        "get_realtime_quote", {"codes": ["AAPL"], "market": "us"}
+    )
+    text = result.content[0].text
+    # 工具返回的 markdown 里应包含 AAPL
+    assert "AAPL" in text
+    # service 收到了 market="us"
+    svc.get_realtime_quote.assert_awaited_once_with(["AAPL"], market="us")

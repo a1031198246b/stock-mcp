@@ -116,7 +116,7 @@ async def test_kline_tool_returns_empty_message():
     text = result.content[0].text
     assert "999999" in text
     assert "无 K线数据" in text
-    svc.get_kline.assert_awaited_once_with("999999", "1d", 30)
+    svc.get_kline.assert_awaited_once_with("999999", "1d", 30, market="a_stock")
 
 
 @pytest.mark.asyncio

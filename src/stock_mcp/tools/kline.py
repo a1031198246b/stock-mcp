@@ -9,18 +9,21 @@ from ..services.kline_service import KlineService
 def register(mcp: FastMCP, service: KlineService) -> None:
 
     @mcp.tool()
-    async def get_kline(code: str, period: str = "1d", count: int = 30) -> str:
+    async def get_kline(
+        code: str, period: str = "1d", count: int = 30, market: str = "a_stock"
+    ) -> str:
         """获取 K 线数据
 
         Args:
-            code: 股票代码，如 "600519"
+            code: 股票代码，如 "600519" (A 股) / "00700" (港股) / "AAPL" (美股)
             period: K线周期，可选 1m/5m/15m/30m/1h/1d/1w/1M
             count: 数量，默认 30
+            market: 市场, "a_stock" (默认) / "hk" / "us"
         Returns:
             Markdown 表格
         """
         try:
-            klines = await service.get_kline(code, period, count)
+            klines = await service.get_kline(code, period, count, market=market)
         except DataSourceError as e:
             return f"❌ K线获取失败: {e}"
 
