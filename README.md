@@ -9,7 +9,7 @@ A 股股票数据 MCP 服务。详见 `E:\claude codeworkspace\docs\superpowers\
 - [x] **P2 多源 + 韧性** — sina/akshare 适配器、缓存、熔断、限流
 - [x] **P3 扩展数据** — tqcenter 基本面（PE/PB/ROE/市值）+ 资讯 + eastmoney
 - [x] **P4 高级查询** — iwencai 自然语言选股
-- [ ] **P5 完善** — 文档、CI、覆盖率（当前 89%）
+- [x] **P5 完善** — 文档、CI、覆盖率（90%）
 
 ## 安装
 
