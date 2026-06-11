@@ -43,16 +43,25 @@ class TqcenterAdapter(BaseAdapter):
             return
 
         self._tq = tqcenter.tq
-        try:
-            self._tq.close()  # 释放可能残留的连接
-        except Exception:
-            pass
 
         # 尝试多种 run_mode
+        # 关键: 每次重试前, 调用 close() (它会调 dll.CloseConnect 真正释放锁)
+        # 之前直接 self._tq._initialized = False 是个 bug - 只骗了 Python 没骗 DLL,
+        # 下次 init 时 DLL 报"已有同名策略运行"
         for mode in range(10):
             try:
+                # 释放可能的残留锁
+                try:
+                    self._tq.close()
+                except Exception:
+                    pass
+                # 给 DLL 一点时间真正释放
+                import time as _time
+                _time.sleep(0.2)
+
                 self._tq.run_mode = mode
-                self._tq._initialized = False
+                # 不再手动设 self._tq._initialized = False
+                # 让 _auto_initialize 自己管理
                 self._tq.initialize(tdx_path)
                 self._initialized = True
                 self.enabled = True

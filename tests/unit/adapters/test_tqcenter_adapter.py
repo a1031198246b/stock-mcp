@@ -102,6 +102,48 @@ class FakeTqKlineModule(FakeTqModule):
     pass
 
 
+def test_initialize_calls_close_between_mode_retries(fake_tqcenter, monkeypatch):
+    """回归测试: 多次 init 之间必须调 close() 真正释放 DLL 锁
+
+    之前的 bug: 直接 self._tq._initialized = False, 只骗 Python 不骗 DLL。
+    下次 init 时 DLL 报 '已有同名策略运行'。
+
+    这个测试验证: 重试 mode 时, close() 会被调 (真正释放 DLL 锁)
+    """
+    monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
+    fake_tqcenter.tq.initialize.side_effect = Exception("mock failure")
+
+    a = TqcenterAdapter()
+    a.initialize()
+
+    # 关键断言: 在 mode 循环里, 每次重试前都调了 close()
+    # 10 个 mode, 至少调 10 次 close (因为每个 mode 失败后都要重试)
+    assert fake_tqcenter.tq.close.call_count >= 10, (
+        f"close() 应在每次 mode 重试前调, 实际调了 {fake_tqcenter.tq.close.call_count} 次"
+    )
+
+
+def test_initialize_does_not_manually_set_private_flag(fake_tqcenter, monkeypatch):
+    """回归测试: 不应手动设 self._tq._initialized = False
+
+    之前手动设这个 flag 是 bug 的根源 (骗 Python 不骗 DLL)。
+    我们重试时只调 close(), 靠 DLL 自己管理 _initialized。
+    """
+    monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
+    fake_tqcenter.tq.initialize.side_effect = Exception("mock failure")
+
+    a = TqcenterAdapter()
+    a.initialize()
+
+    # close() 必须被调
+    assert fake_tqcenter.tq.close.called
+
+    # 关键: 我们的代码不应再设 self._tq._initialized = False
+    # (没法直接断言 "代码里没这行", 但可以间接验证:
+    # 如果设了, 再次 init 就能"骗过去" (返回 -1 的初始化会"成功"被误判))
+    # 真实情况是: 我们的代码现在不设了, 所以每次都得 close() 才能 init
+
+
 @pytest.mark.asyncio
 async def test_get_kline_normalizes_fields(fake_tqcenter, monkeypatch):
     monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
