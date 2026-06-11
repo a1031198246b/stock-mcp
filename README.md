@@ -75,17 +75,6 @@ TDX_PATH="C:\new_tdx64" uv run pytest tests/integration/tdxcenter/ -v
 | **eastmoney** | ❌ | ⚠️ 补全 | ❌ | ✅ | ❌ |
 | **iwencai** (可选) | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-## 已实现 MCP 工具
-
-| 工具 | 说明 |
-|---|---|
-| `ping` | 健康检查 |
-| `get_realtime_quote` | 实时行情 |
-| `get_kline` | K线数据 |
-| `get_fundamental` | 基本面数据 |
-| `get_news` | 资讯公告 |
-| `query_stocks` | 自然语言选股（需 iwencai cookie） |
-
 ## 数据源
 
 - **tqcenter** (priority 1, 主源)：通达信插件，需本地安装
