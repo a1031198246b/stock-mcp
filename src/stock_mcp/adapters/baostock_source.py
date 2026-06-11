@@ -34,13 +34,21 @@ def _coerce_df(result: Any) -> pd.DataFrame:
 
     真实 baostock: rs = bs.query_*(); df = rs.get_data()
     测试 mock: 直接 return_value = pd.DataFrame({...})
+
+    **Workaround**: baostock 0.9.20 内部用 `DataFrame.append` (pandas 2.x 已删).
+    若 `get_data()` 抛 AttributeError, 从 `rs.data` (list of lists) + `rs.fields` 重建.
     """
     if isinstance(result, pd.DataFrame):
         return result
-    # real baostock ResultData
     if hasattr(result, "get_data"):
-        df = result.get_data()
-        return df if df is not None else pd.DataFrame()
+        try:
+            df = result.get_data()
+            return df if df is not None else pd.DataFrame()
+        except AttributeError:
+            # baostock 0.9.20 + pandas 2.x 兼容绕过
+            if hasattr(result, "data") and hasattr(result, "fields"):
+                return pd.DataFrame(result.data, columns=result.fields)
+            return pd.DataFrame()
     return pd.DataFrame()
 
 
@@ -157,25 +165,73 @@ class BaostockAdapter(BaseAdapter):
     async def get_financial_statement(
         self, code: str, statement_type: str, market: Market = "a_stock"
     ) -> FinancialStatement:
-        """baostock 财务三表 — 仅此适配器实现"""
+        """baostock 财务三表 — 仅此适配器实现
+
+        **关键**: baostock 财务三表必须带 year/quarter 参数, 不带返回 0 行.
+        adapter 自动循环最近 4 个 quarter 直到拿到非空结果 (季报有 1-2 月延迟).
+        """
         self._login()
-        if statement_type == "income":
-            rs = self._bs.query_profit_data(code=_to_bs_code(code))
-        elif statement_type == "balance":
-            rs = self._bs.query_balance_data(code=_to_bs_code(code))
-        elif statement_type == "cashflow":
-            rs = self._bs.query_cash_flow_data(code=_to_bs_code(code))
-        else:
-            raise ValueError(
-                f"statement_type 必须是 income/balance/cashflow, 得到 {statement_type}"
+        # 找能拿到数据的最近 quarter
+        now = datetime.now()
+        # baostock 用 1-4 表示 Q1-Q4
+        current_q = (now.month - 1) // 3 + 1
+        # 上 4 个 quarter (含当前, 因为可能当季还没出)
+        quarters_to_try: list[tuple[int, int]] = []
+        y, q = now.year, current_q
+        for _ in range(5):  # 试 5 个 quarter 兜底
+            quarters_to_try.append((y, q))
+            q -= 1
+            if q == 0:
+                q = 4
+                y -= 1
+
+        dfs: list[pd.DataFrame] = []
+        used_period = ""
+        for year, quarter in quarters_to_try:
+            if statement_type == "income":
+                rs = self._bs.query_profit_data(code=_to_bs_code(code), year=year, quarter=quarter)
+            elif statement_type == "balance":
+                rs = self._bs.query_balance_data(code=_to_bs_code(code), year=year, quarter=quarter)
+            elif statement_type == "cashflow":
+                rs = self._bs.query_cash_flow_data(
+                    code=_to_bs_code(code), year=year, quarter=quarter
+                )
+            else:
+                raise ValueError(
+                    f"statement_type 必须是 income/balance/cashflow, 得到 {statement_type}"
+                )
+
+            _check_error(rs, statement_type, self.name)
+            df = _coerce_df(rs)
+            if df is not None and not df.empty:
+                if not used_period and "statDate" in df.columns and len(df) > 0:
+                    first_stat = df["statDate"].iloc[0]
+                    used_period = (
+                        str(first_stat)
+                        if first_stat is not None and not pd.isna(first_stat)
+                        else ""
+                    )
+                dfs.append(df)
+                if len(dfs) >= 4:  # 拿够 4 个季度就停
+                    break
+
+        if not dfs:
+            return FinancialStatement(
+                code=code,
+                name="",
+                market=market,
+                period="",
+                statement_type=statement_type,
+                data={},
+                source=self.name,
+                fetched_at=datetime.now(),
             )
 
-        _check_error(rs, statement_type, self.name)
-        df = _coerce_df(rs)
+        df = pd.concat(dfs, ignore_index=True)
 
         # baostock 第一行含股票名 (例如 "贵州茅台") in 'code_name' column
         name = ""
-        if df is not None and not df.empty:
+        if not df.empty:
             first_row = df.iloc[0].to_dict()
             for k, v in first_row.items():
                 if "code_name" in k or "名称" in k:
@@ -184,27 +240,20 @@ class BaostockAdapter(BaseAdapter):
 
         # data 结构: {col_name: [row_values...]}, 测试断言 data["roeAvg"][0] ≈ 0.10
         data: dict[str, list[Any]] = {}
-        period = ""
-        if df is not None and not df.empty:
-            for col in df.columns:
-                col_values: list[Any] = []
-                for v in df[col].tolist():
-                    if v is None or (isinstance(v, float) and pd.isna(v)):
-                        col_values.append(None)
-                    else:
-                        col_values.append(v)
-                data[col] = col_values
-            if "statDate" in df.columns and len(df) > 0:
-                first_stat = df["statDate"].iloc[0]
-                period = (
-                    str(first_stat) if first_stat is not None and not pd.isna(first_stat) else ""
-                )
+        for col in df.columns:
+            col_values: list[Any] = []
+            for v in df[col].tolist():
+                if v is None or (isinstance(v, float) and pd.isna(v)):
+                    col_values.append(None)
+                else:
+                    col_values.append(v)
+            data[col] = col_values
 
         return FinancialStatement(
             code=code,
             name=name,
             market=market,
-            period=period,
+            period=used_period,
             statement_type=statement_type,
             data=data,
             source=self.name,
