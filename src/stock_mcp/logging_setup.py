@@ -1,7 +1,10 @@
 """结构化日志初始化"""
+
 import logging
 import sys
+
 import structlog
+
 from .config import get_settings
 
 

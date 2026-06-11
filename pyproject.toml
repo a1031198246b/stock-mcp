@@ -52,3 +52,28 @@ exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# E/W: pycodestyle errors & warnings
+# F: pyflakes (unused imports, undefined names)
+# I: isort (import sorting)
+# N: pep8-naming
+# UP: pyupgrade (modern Python syntax)
+# B: flake8-bugbear (likely bugs)
+select = ["E", "W", "F", "I", "N", "UP", "B"]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["B011"]  # asserts in tests are fine
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

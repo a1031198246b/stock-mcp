@@ -1,15 +1,17 @@
 """熔断器 - CLOSED → OPEN → HALF_OPEN → CLOSED"""
+
 import asyncio
 import time
-from enum import Enum
-from typing import Awaitable, Callable, TypeVar
+from collections.abc import Awaitable, Callable
+from enum import StrEnum
+from typing import TypeVar
 
 from ..domain.errors import DataSourceError
 
 T = TypeVar("T")
 
 
-class CircuitState(str, Enum):
+class CircuitState(StrEnum):
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"
@@ -21,7 +23,9 @@ class CircuitOpenError(DataSourceError):
 
 
 class CircuitBreaker:
-    def __init__(self, name: str = "default", failure_threshold: int = 3, recovery_timeout: int = 300):
+    def __init__(
+        self, name: str = "default", failure_threshold: int = 3, recovery_timeout: int = 300
+    ):
         self.name = name
         self._failure_threshold = failure_threshold
         self._recovery_timeout = recovery_timeout

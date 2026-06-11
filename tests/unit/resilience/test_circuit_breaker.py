@@ -1,4 +1,5 @@
 import pytest
+
 from stock_mcp.resilience.circuit_breaker import CircuitBreaker, CircuitState
 
 
@@ -32,9 +33,11 @@ async def test_half_open_after_timeout(freezer):
     await cb.record_failure()
     # 1 秒后
     freezer.tick(1.1)
+
     # 下次 call 进入 HALF_OPEN
     async def success():
         return "ok"
+
     # 重新跑 call, 期望走半开探测
     # 注: freezegun 与 CircuitBreaker 的实现需要协调; 见实际测试
     assert cb.state == CircuitState.HALF_OPEN

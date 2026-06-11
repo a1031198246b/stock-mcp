@@ -1,4 +1,5 @@
 """管理类工具：健康检查、缓存管理"""
+
 from fastmcp import FastMCP
 
 

@@ -1,4 +1,5 @@
 """全局 pytest fixtures"""
+
 import asyncio
 import tempfile
 import time
@@ -18,6 +19,7 @@ def event_loop():
 def _reset_settings_singleton():
     """每个测试前重置 settings 缓存，使 monkeypatch.setenv 立即生效。"""
     from stock_mcp.config import reset_settings
+
     reset_settings()
     yield
     reset_settings()

@@ -1,4 +1,5 @@
 """tools/admin.py 单元测试 — ping 健康检查工具"""
+
 import pytest
 from fastmcp import FastMCP
 

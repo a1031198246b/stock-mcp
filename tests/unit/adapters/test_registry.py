@@ -1,9 +1,11 @@
+from datetime import datetime
+
 import pytest
+
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
-from stock_mcp.domain.models import Quote
-from datetime import datetime
 from stock_mcp.domain.errors import DataSourceError
+from stock_mcp.domain.models import Quote
 
 
 class FakeAdapter(BaseAdapter):
@@ -42,9 +44,24 @@ async def test_registry_sorts_by_priority():
 
 @pytest.mark.asyncio
 async def test_fallback_to_second_when_first_fails():
-    q2 = [Quote(code="1", name="x", price=2, change_pct=0, amount=0,
-                volume=0, open=1, high=1, low=1, last_close=1,
-                bid_5=[0]*5, ask_5=[0]*5, timestamp=datetime.now(), source="a2")]
+    q2 = [
+        Quote(
+            code="1",
+            name="x",
+            price=2,
+            change_pct=0,
+            amount=0,
+            volume=0,
+            open=1,
+            high=1,
+            low=1,
+            last_close=1,
+            bid_5=[0] * 5,
+            ask_5=[0] * 5,
+            timestamp=datetime.now(),
+            source="a2",
+        )
+    ]
 
     class FailingAdapter(FakeAdapter):
         async def get_realtime_quote(self, codes):
@@ -74,9 +91,24 @@ async def test_all_fail_raises():
 
 @pytest.mark.asyncio
 async def test_disabled_adapter_skipped():
-    q = [Quote(code="1", name="x", price=1, change_pct=0, amount=0,
-               volume=0, open=1, high=1, low=1, last_close=1,
-               bid_5=[0]*5, ask_5=[0]*5, timestamp=datetime.now(), source="a1")]
+    q = [
+        Quote(
+            code="1",
+            name="x",
+            price=1,
+            change_pct=0,
+            amount=0,
+            volume=0,
+            open=1,
+            high=1,
+            low=1,
+            last_close=1,
+            bid_5=[0] * 5,
+            ask_5=[0] * 5,
+            timestamp=datetime.now(),
+            source="a1",
+        )
+    ]
     a = FakeAdapter("a", priority=1, quote_result=q)
     a.enabled = False
     reg = AdapterRegistry([a])

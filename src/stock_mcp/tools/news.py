@@ -1,7 +1,9 @@
 """资讯 MCP 工具"""
+
 from fastmcp import FastMCP
-from ..services.news_service import NewsService
+
 from ..domain.errors import DataSourceError
+from ..services.news_service import NewsService
 
 
 def register(mcp: FastMCP, service: NewsService) -> None:

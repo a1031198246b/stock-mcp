@@ -7,7 +7,7 @@
 
 如果网络不通，自动 skip
 """
-import asyncio
+
 import os
 import sys
 from pathlib import Path
@@ -26,6 +26,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def sina_adapter():
     from stock_mcp.adapters.sina import SinaAdapter
+
     return SinaAdapter()
 
 

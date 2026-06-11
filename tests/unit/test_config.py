@@ -1,6 +1,5 @@
 from stock_mcp.config import Settings
 
-
 # 显式传 _env_file=None 避免项目根 .env 干扰测试
 NO_ENV = {"_env_file": None}
 

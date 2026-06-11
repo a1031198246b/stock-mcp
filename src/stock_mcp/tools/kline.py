@@ -1,7 +1,9 @@
 """K线 MCP 工具"""
+
 from fastmcp import FastMCP
-from ..services.kline_service import KlineService
+
 from ..domain.errors import DataSourceError
+from ..services.kline_service import KlineService
 
 
 def register(mcp: FastMCP, service: KlineService) -> None:
@@ -34,6 +36,6 @@ def register(mcp: FastMCP, service: KlineService) -> None:
         for k in klines:
             lines.append(
                 f"| {k.datetime.strftime('%Y-%m-%d %H:%M')} | {k.open} | "
-                f"{k.high} | {k.low} | {k.close} | {k.volume} | {k.amount/1e8:.2f} |"
+                f"{k.high} | {k.low} | {k.close} | {k.volume} | {k.amount / 1e8:.2f} |"
             )
         return "\n".join(lines)

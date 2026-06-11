@@ -1,4 +1,5 @@
 """tools/kline.py 单元测试 — 覆盖 K线工具的三条分支"""
+
 from datetime import datetime
 from unittest.mock import AsyncMock
 
@@ -44,9 +45,15 @@ class FakeKlineAdapter(BaseAdapter):
 
 def _make_kline(code: str = "600519", period: str = "1d", close: float = 103.0) -> Kline:
     return Kline(
-        code=code, period=period, datetime=datetime(2026, 6, 10),
-        open=100, high=105, low=99, close=close,
-        volume=1_000_000, amount=1e8,
+        code=code,
+        period=period,
+        datetime=datetime(2026, 6, 10),
+        open=100,
+        high=105,
+        low=99,
+        close=close,
+        volume=1_000_000,
+        amount=1e8,
     )
 
 

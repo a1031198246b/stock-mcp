@@ -2,13 +2,14 @@
 
 依赖: pywencai (需 Node.js 16+)
 """
-from typing import List
+
 import pandas as pd
+
 from ..config import get_settings
+from ..domain.errors import AuthError, DataSourceError
 from ..domain.models import (
     StockQueryResult,
 )
-from ..domain.errors import DataSourceError, AuthError
 from .base import BaseAdapter
 
 
@@ -31,14 +32,23 @@ class IwencaiAdapter(BaseAdapter):
         self._pywencai = pywencai
         self.enabled = True
 
-    async def get_realtime_quote(self, codes): raise NotImplementedError
-    async def get_kline(self, code, period, count): raise NotImplementedError
-    async def get_fundamental(self, code): raise NotImplementedError
-    async def get_news(self, code, limit): raise NotImplementedError
+    async def get_realtime_quote(self, codes):
+        raise NotImplementedError
 
-    async def query_stocks(self, condition: str) -> List[StockQueryResult]:
+    async def get_kline(self, code, period, count):
+        raise NotImplementedError
+
+    async def get_fundamental(self, code):
+        raise NotImplementedError
+
+    async def get_news(self, code, limit):
+        raise NotImplementedError
+
+    async def query_stocks(self, condition: str) -> list[StockQueryResult]:
         if not self.enabled:
-            raise DataSourceError("iwencai 未启用 (cookie 缺失或 pywencai 未安装)", source=self.name)
+            raise DataSourceError(
+                "iwencai 未启用 (cookie 缺失或 pywencai 未安装)", source=self.name
+            )
         settings = get_settings()
         try:
             df = self._pywencai.get(
@@ -49,8 +59,8 @@ class IwencaiAdapter(BaseAdapter):
         except Exception as e:
             msg = str(e)
             if "登录" in msg or "cookie" in msg.lower() or "expired" in msg.lower():
-                raise AuthError(msg, source=self.name)
-            raise DataSourceError(msg, source=self.name)
+                raise AuthError(msg, source=self.name) from e
+            raise DataSourceError(msg, source=self.name) from e
 
         results = []
         if df is None or df.empty:
@@ -72,7 +82,11 @@ class IwencaiAdapter(BaseAdapter):
                 for col, v in row.items()
                 if col not in (code_col, name_col)
             }
-            results.append(StockQueryResult(
-                code=code, name=name, matched_fields=matched,
-            ))
+            results.append(
+                StockQueryResult(
+                    code=code,
+                    name=name,
+                    matched_fields=matched,
+                )
+            )
         return results

@@ -1,6 +1,7 @@
 """全局配置 - 通过环境变量加载"""
+
 from pathlib import Path
-from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,20 +20,20 @@ class Settings(BaseSettings):
 
     # 缓存
     cache_dir: Path = Path("./.cache")
-    cache_db_path: Optional[Path] = None  # 默认 = cache_dir/stock-mcp.db
+    cache_db_path: Path | None = None  # 默认 = cache_dir/stock-mcp.db
 
     # iwencai
-    iwencai_cookie: Optional[str] = None
+    iwencai_cookie: str | None = None
 
     # 代理
-    http_proxy: Optional[str] = None
+    http_proxy: str | None = None
 
     def model_post_init(self, __context):
         if self.cache_db_path is None:
             self.cache_db_path = self.cache_dir / "stock-mcp.db"
 
 
-_settings: Optional[Settings] = None
+_settings: Settings | None = None
 
 
 def get_settings() -> Settings:

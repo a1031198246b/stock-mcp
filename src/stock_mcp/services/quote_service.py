@@ -1,9 +1,9 @@
 """行情服务 - 编排缓存 + 多源 fallback"""
-from typing import List
-from ..domain.models import Quote
+
 from ..adapters.registry import AdapterRegistry
 from ..cache.sqlite_cache import SQLiteCache
 from ..cache.ttl import TTLCalculator
+from ..domain.models import Quote
 
 
 class QuoteService:
@@ -17,7 +17,7 @@ class QuoteService:
         self._cache = cache
         self._ttl_calc = ttl_calc
 
-    async def get_realtime_quote(self, codes: List[str]) -> List[Quote]:
+    async def get_realtime_quote(self, codes: list[str]) -> list[Quote]:
         # 1. 查缓存（按桶）
         bucket = self._ttl_calc.bucket_for("realtime_quote")
         cached = []

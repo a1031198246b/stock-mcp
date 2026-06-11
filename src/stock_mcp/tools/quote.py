@@ -1,14 +1,15 @@
 """行情类 MCP 工具"""
-from typing import List
+
 from fastmcp import FastMCP
-from ..services.quote_service import QuoteService
+
 from ..domain.errors import DataSourceError
+from ..services.quote_service import QuoteService
 
 
 def register(mcp: FastMCP, service: QuoteService) -> None:
 
     @mcp.tool()
-    async def get_realtime_quote(codes: List[str]) -> str:
+    async def get_realtime_quote(codes: list[str]) -> str:
         """获取 A 股实时行情
 
         Args:
@@ -32,6 +33,6 @@ def register(mcp: FastMCP, service: QuoteService) -> None:
         for q in quotes:
             lines.append(
                 f"| {q.code} | {q.name} | {q.price} | {q.change_pct:+.2f} | "
-                f"{q.amount/1e8:.2f} | {q.volume} | {q.bid_5[0]} | {q.ask_5[0]} | {q.source} |"
+                f"{q.amount / 1e8:.2f} | {q.volume} | {q.bid_5[0]} | {q.ask_5[0]} | {q.source} |"
             )
         return "\n".join(lines)

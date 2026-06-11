@@ -6,6 +6,7 @@ iwencai 需要:
 
 如果任一缺失, 自动 skip
 """
+
 import os
 import sys
 from pathlib import Path
@@ -19,6 +20,7 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 try:
     import pywencai  # noqa
+
     HAS_PYWENCAI = True
 except ImportError:
     HAS_PYWENCAI = False
@@ -27,7 +29,7 @@ HAS_COOKIE = bool(os.environ.get("IWENCAI_COOKIE"))
 
 pytestmark = pytest.mark.skipif(
     not (HAS_PYWENCAI and HAS_COOKIE),
-    reason=f"iwencai 集成测试需要 pywencai + IWENCAI_COOKIE (HAS_PYWENCAI={HAS_PYWENCAI}, HAS_COOKIE={HAS_COOKIE})"
+    reason=f"iwencai 集成测试需要 pywencai + IWENCAI_COOKIE (HAS_PYWENCAI={HAS_PYWENCAI}, HAS_COOKIE={HAS_COOKIE})",
 )
 
 
@@ -35,6 +37,7 @@ pytestmark = pytest.mark.skipif(
 async def test_iwencai_query_stocks_real():
     """真实调爱问财, 查询 "PE < 30" 的股票"""
     from stock_mcp.adapters.iwencai import IwencaiAdapter
+
     a = IwencaiAdapter()
     a.initialize()
     if not a.enabled:

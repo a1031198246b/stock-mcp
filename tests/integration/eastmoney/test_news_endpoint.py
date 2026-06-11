@@ -4,7 +4,7 @@
 
 如果网络不通，自动 skip
 """
-import asyncio
+
 import os
 import sys
 from pathlib import Path
@@ -23,6 +23,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def eastmoney_adapter():
     from stock_mcp.adapters.eastmoney import EastmoneyAdapter
+
     return EastmoneyAdapter()
 
 
@@ -43,6 +44,6 @@ async def test_eastmoney_news_returns_valid_data(eastmoney_adapter):
     # 如果有数据, 检查格式
     for n in news:
         assert n.title  # 有标题
-        assert n.url    # 有链接
+        assert n.url  # 有链接
         # 茅台代码可能带也可能不带
         # 但 news.source 应该是 "东方财富" 或 news.mediaName

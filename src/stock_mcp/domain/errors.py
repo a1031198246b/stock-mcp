@@ -3,6 +3,7 @@
 
 class StockMCPError(Exception):
     """所有异常的基类"""
+
     pass
 
 
@@ -39,9 +40,11 @@ class ParseError(DataSourceError):
 
 class NotFoundError(StockMCPError):
     """股票代码不存在"""
+
     pass
 
 
 class CacheError(StockMCPError):
     """缓存读写失败（不致命，会降级到直连源）"""
+
     pass

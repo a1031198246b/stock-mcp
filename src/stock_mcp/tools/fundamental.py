@@ -1,7 +1,9 @@
 """基本面 MCP 工具"""
+
 from fastmcp import FastMCP
-from ..services.fundamental_service import FundamentalService
+
 from ..domain.errors import DataSourceError
+from ..services.fundamental_service import FundamentalService
 
 
 def register(mcp: FastMCP, service: FundamentalService) -> None:

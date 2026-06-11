@@ -1,14 +1,16 @@
-import pytest
 import tempfile
-from pathlib import Path
 from datetime import datetime
-from stock_mcp.tools.quote import register
-from stock_mcp.domain.models import Quote
+from pathlib import Path
+
+import pytest
+
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
-from stock_mcp.services.quote_service import QuoteService
 from stock_mcp.cache.sqlite_cache import SQLiteCache
 from stock_mcp.cache.ttl import TTLCalculator
+from stock_mcp.domain.models import Quote
+from stock_mcp.services.quote_service import QuoteService
+from stock_mcp.tools.quote import register
 
 
 class FakeAdapter(BaseAdapter):
@@ -17,11 +19,18 @@ class FakeAdapter(BaseAdapter):
         self.name = "fake"
         self.priority = 1
         self.enabled = True
+
     async def get_realtime_quote(self, codes):
         return [self._q] if self._q.code in codes else []
-    async def get_kline(self, code, period, count): return []
-    async def get_fundamental(self, code): return None
-    async def get_news(self, code, limit): return []
+
+    async def get_kline(self, code, period, count):
+        return []
+
+    async def get_fundamental(self, code):
+        return None
+
+    async def get_news(self, code, limit):
+        return []
 
 
 @pytest.mark.asyncio
@@ -29,9 +38,19 @@ async def test_quote_tool_returns_list():
     from fastmcp import FastMCP
 
     q = Quote(
-        code="600519", name="贵州茅台", price=1500.0, change_pct=2.5,
-        amount=1e9, volume=10000, open=1480, high=1510, low=1475, last_close=1463.5,
-        bid_5=[100]*5, ask_5=[150]*5, timestamp=datetime(2026, 6, 10),
+        code="600519",
+        name="贵州茅台",
+        price=1500.0,
+        change_pct=2.5,
+        amount=1e9,
+        volume=10000,
+        open=1480,
+        high=1510,
+        low=1475,
+        last_close=1463.5,
+        bid_5=[100] * 5,
+        ask_5=[150] * 5,
+        timestamp=datetime(2026, 6, 10),
         source="tqcenter",
     )
     adapter = FakeAdapter(q)

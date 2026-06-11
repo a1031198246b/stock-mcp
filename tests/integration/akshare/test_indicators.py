@@ -5,7 +5,7 @@ akshare 包当前**未装在 venv**。要跑这个集成测试需要:
 
 如果 akshare 未装, 自动 skip
 """
-import os
+
 import sys
 from pathlib import Path
 
@@ -16,18 +16,18 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 akshare_installed = pytest.mark.skipif(
     lambda: True,  # placeholder, see below
-    reason="akshare 未装"
+    reason="akshare 未装",
 )
 
 try:
     import akshare  # noqa
+
     HAS_AKSHARE = True
 except ImportError:
     HAS_AKSHARE = False
 
 pytestmark = pytest.mark.skipif(
-    not HAS_AKSHARE,
-    reason="akshare 未装, 跳过集成测试. 安装: uv pip install akshare"
+    not HAS_AKSHARE, reason="akshare 未装, 跳过集成测试. 安装: uv pip install akshare"
 )
 
 
@@ -35,6 +35,7 @@ pytestmark = pytest.mark.skipif(
 async def test_akshare_fundamental_returns_valid_data():
     """真实调 akshare 取茅台基本面"""
     from stock_mcp.adapters.akshare_source import AkshareAdapter
+
     a = AkshareAdapter()
     if not a.enabled:
         pytest.skip("akshare 适配器未启用")
@@ -59,6 +60,7 @@ async def test_akshare_fundamental_returns_valid_data():
 async def test_akshare_kline_returns_valid_data():
     """真实调 akshare 取茅台日 K"""
     from stock_mcp.adapters.akshare_source import AkshareAdapter
+
     a = AkshareAdapter()
     if not a.enabled:
         pytest.skip("akshare 适配器未启用")

@@ -8,9 +8,10 @@
 
 如果通达信不可用或 tqcenter 锁被占用，相关测试自动 skip
 """
+
+import asyncio
 import os
 import sys
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -35,9 +36,11 @@ pytestmark = pytest.mark.skipif(
 
 # ============== Bug 1: 代码格式自动补后缀 ==============
 
+
 def test_to_tq_code_appends_sh_suffix():
     """6 开头代码自动补 .SH"""
     from stock_mcp.adapters.tqcenter import TqcenterAdapter
+
     assert TqcenterAdapter._to_tq_code("600519") == "600519.SH"
     assert TqcenterAdapter._to_tq_code("688318") == "688318.SH"
     assert TqcenterAdapter._to_tq_code("900901") == "900901.SH"
@@ -46,6 +49,7 @@ def test_to_tq_code_appends_sh_suffix():
 def test_to_tq_code_appends_sz_suffix():
     """0/3 开头代码自动补 .SZ"""
     from stock_mcp.adapters.tqcenter import TqcenterAdapter
+
     assert TqcenterAdapter._to_tq_code("000001") == "000001.SZ"
     assert TqcenterAdapter._to_tq_code("300750") == "300750.SZ"
 
@@ -53,6 +57,7 @@ def test_to_tq_code_appends_sz_suffix():
 def test_to_tq_code_passthrough():
     """已带后缀的代码不变"""
     from stock_mcp.adapters.tqcenter import TqcenterAdapter
+
     assert TqcenterAdapter._to_tq_code("600519.SH") == "600519.SH"
     assert TqcenterAdapter._to_tq_code("000001.SZ") == "000001.SZ"
     assert TqcenterAdapter._to_tq_code("sh600519") == "600519.SH"
@@ -60,6 +65,7 @@ def test_to_tq_code_passthrough():
 
 
 # ============== Bug 2 & 3: 字段单位正确 ==============
+
 
 @pytest.fixture
 def tq_adapter():
@@ -73,11 +79,12 @@ def tq_adapter():
     启动时: 给 DLL 一点时间让之前的锁自然释放 (DLL 端 close 是异步的)
     """
     import time as _time
+
     from stock_mcp.adapters.tqcenter import TqcenterAdapter
 
     # 重试: 给 DLL 一些时间释放锁
     last_err = None
-    for attempt in range(3):
+    for _attempt in range(3):
         a = TqcenterAdapter()
         a.initialize()
         if a.enabled:
@@ -125,8 +132,7 @@ def test_get_realtime_quote_amount_in_yuan(tq_adapter):
     # 茅台日成交额至少几亿元, 即 10^9 元以上
     # 修 bug 之前这里会是 ~5*10^5 (万元)
     assert q.amount > 1e8, (
-        f"成交额 {q.amount} 元 异常小, 应该是元单位 (>=1e8), "
-        f"看起来单位没换算 (万元 vs 元)"
+        f"成交额 {q.amount} 元 异常小, 应该是元单位 (>=1e8), 看起来单位没换算 (万元 vs 元)"
     )
 
 
@@ -137,8 +143,7 @@ def test_get_realtime_quote_volume_in_lots(tq_adapter):
     # 茅台日成交量在 几万 手 量级
     # 修 bug 之前这里是 ~3.9*10^6 (股)
     assert 1e3 < q.volume < 1e6, (
-        f"成交量 {q.volume} 手 异常, 应该是手单位 (1e3-1e6), "
-        f"看起来单位没换算 (股 vs 手)"
+        f"成交量 {q.volume} 手 异常, 应该是手单位 (1e3-1e6), 看起来单位没换算 (股 vs 手)"
     )
 
 
@@ -149,12 +154,9 @@ def test_get_realtime_quote_bid_ask_in_lots(tq_adapter):
     # 买一量: 1-1000 手是合理的
     # 修 bug 之前这里会是 424 (股)
     assert all(0 <= v < 10000 for v in q.bid_5), (
-        f"买一量 {q.bid_5} 异常, 应该是手单位 (0-10000), "
-        f"看起来单位没换算"
+        f"买一量 {q.bid_5} 异常, 应该是手单位 (0-10000), 看起来单位没换算"
     )
-    assert all(0 <= v < 10000 for v in q.ask_5), (
-        f"卖一量 {q.ask_5} 异常, 应该是手单位 (0-10000)"
-    )
+    assert all(0 <= v < 10000 for v in q.ask_5), f"卖一量 {q.ask_5} 异常, 应该是手单位 (0-10000)"
 
 
 def test_get_realtime_quote_basic_fields(tq_adapter):
@@ -191,9 +193,11 @@ def test_get_realtime_quote_invalid_code_format(tq_adapter):
 
 # ============== 基本面 ==============
 
+
 def test_get_fundamental_maotai(tq_adapter):
     """茅台: 总股本 12.5 亿股左右, PE 应在 5~30 区间"""
     import asyncio
+
     f = asyncio.run(tq_adapter.get_fundamental("600519"))
     assert f is not None
     assert f.code == "600519"
@@ -213,6 +217,7 @@ def test_get_fundamental_maotai(tq_adapter):
 def test_get_fundamental_returns_none_for_nonexistent_code(tq_adapter):
     """Bug 1 反向验证: 不存在代码返回 None (不是抛异常)"""
     import asyncio
+
     f = asyncio.run(tq_adapter.get_fundamental("999999"))
     assert f is None
 

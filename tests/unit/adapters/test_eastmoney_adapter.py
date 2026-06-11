@@ -1,5 +1,6 @@
 import pytest
 import respx
+
 from stock_mcp.adapters.eastmoney import EastmoneyAdapter
 
 

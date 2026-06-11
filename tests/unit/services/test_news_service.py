@@ -1,13 +1,15 @@
-import pytest
 import tempfile
-from pathlib import Path
 from datetime import datetime
-from stock_mcp.services.news_service import NewsService
+from pathlib import Path
+
+import pytest
+
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
-from stock_mcp.domain.models import NewsItem
 from stock_mcp.cache.sqlite_cache import SQLiteCache
 from stock_mcp.cache.ttl import TTLCalculator
+from stock_mcp.domain.models import NewsItem
+from stock_mcp.services.news_service import NewsService
 
 
 class FakeNewsAdapter(BaseAdapter):
@@ -17,9 +19,16 @@ class FakeNewsAdapter(BaseAdapter):
         self.priority = 1
         self.enabled = True
         self.call_count = 0
-    async def get_realtime_quote(self, codes): return []
-    async def get_kline(self, code, period, count): return []
-    async def get_fundamental(self, code): return None
+
+    async def get_realtime_quote(self, codes):
+        return []
+
+    async def get_kline(self, code, period, count):
+        return []
+
+    async def get_fundamental(self, code):
+        return None
+
     async def get_news(self, code, limit):
         self.call_count += 1
         return [n for n in self._news if n.code == code][:limit]
@@ -39,7 +48,13 @@ def ttl_calc():
 @pytest.mark.asyncio
 async def test_get_news_caches(sqlite_cache, ttl_calc):
     news = [
-        NewsItem(code="600519", title="茅台公告", url="http://x", publish_time=datetime(2026, 6, 10), source="eastmoney"),
+        NewsItem(
+            code="600519",
+            title="茅台公告",
+            url="http://x",
+            publish_time=datetime(2026, 6, 10),
+            source="eastmoney",
+        ),
     ]
     adapter = FakeNewsAdapter(news)
     svc = NewsService(AdapterRegistry([adapter]), sqlite_cache, ttl_calc)

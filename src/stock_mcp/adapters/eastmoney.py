@@ -3,11 +3,12 @@
 真实端点: https://np-anotice-stock.eastmoney.com/api/security/ann
 (集成测试验证 2026-06-10)
 """
-from typing import List
+
 import httpx
 import pandas as pd
-from ..domain.models import NewsItem
+
 from ..domain.errors import DataSourceError
+from ..domain.models import NewsItem
 from .base import BaseAdapter
 
 
@@ -18,11 +19,16 @@ class EastmoneyAdapter(BaseAdapter):
 
     BASE_URL = "https://np-anotice-stock.eastmoney.com/api/security/ann"
 
-    async def get_realtime_quote(self, codes): return []
-    async def get_kline(self, code, period, count): return []
-    async def get_fundamental(self, code): return None
+    async def get_realtime_quote(self, codes):
+        return []
 
-    async def get_news(self, code: str, limit: int) -> List[NewsItem]:
+    async def get_kline(self, code, period, count):
+        return []
+
+    async def get_fundamental(self, code):
+        return None
+
+    async def get_news(self, code: str, limit: int) -> list[NewsItem]:
         """获取公告 (ann_type=A)
 
         真实响应结构 (验证于 2026-06-10):
@@ -53,7 +59,7 @@ class EastmoneyAdapter(BaseAdapter):
                 resp.raise_for_status()
                 data = resp.json()
         except Exception as e:
-            raise DataSourceError(str(e), source=self.name)
+            raise DataSourceError(str(e), source=self.name) from e
 
         items = []
         for item in data.get("data", {}).get("list", []):
@@ -70,8 +76,7 @@ class EastmoneyAdapter(BaseAdapter):
                 # 公告 URL
                 art_code = item.get("art_code", "")
                 detail_url = (
-                    f"https://data.eastmoney.com/notices/detail/{art_code}.html"
-                    if art_code else ""
+                    f"https://data.eastmoney.com/notices/detail/{art_code}.html" if art_code else ""
                 )
 
                 # 来源: 第一列的栏目名
@@ -80,13 +85,15 @@ class EastmoneyAdapter(BaseAdapter):
                 if columns and columns[0].get("column_name"):
                     source_name = columns[0]["column_name"]
 
-                items.append(NewsItem(
-                    code=code,
-                    title=item.get("title", ""),
-                    url=detail_url,
-                    publish_time=publish_time,
-                    source=source_name,
-                ))
+                items.append(
+                    NewsItem(
+                        code=code,
+                        title=item.get("title", ""),
+                        url=detail_url,
+                        publish_time=publish_time,
+                        source=source_name,
+                    )
+                )
             except Exception:
                 continue
         return items[:limit]

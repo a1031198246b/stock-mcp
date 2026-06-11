@@ -1,10 +1,11 @@
 """资讯服务"""
+
 import json
-from typing import List
-from ..domain.models import NewsItem
+
 from ..adapters.registry import AdapterRegistry
 from ..cache.sqlite_cache import SQLiteCache
 from ..cache.ttl import TTLCalculator
+from ..domain.models import NewsItem
 
 
 class NewsService:
@@ -13,7 +14,7 @@ class NewsService:
         self._cache = cache
         self._ttl_calc = ttl_calc
 
-    async def get_news(self, code: str, limit: int) -> List[NewsItem]:
+    async def get_news(self, code: str, limit: int) -> list[NewsItem]:
         bucket = self._ttl_calc.bucket_for("news")
         key = f"news:{code}:{limit}:{bucket}"
         cached = await self._cache.get(key)

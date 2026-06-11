@@ -1,10 +1,12 @@
 """新浪财经行情适配器"""
+
 import re
-from typing import List, Optional
+
 import httpx
 import pandas as pd
-from ..domain.models import Quote
+
 from ..domain.errors import DataSourceError, ParseError
+from ..domain.models import Quote
 from .base import BaseAdapter
 
 
@@ -16,7 +18,7 @@ def _to_sina_code(code: str) -> str:
     return f"sz{code}"
 
 
-def _parse_sina_line(line: str) -> Optional[Quote]:
+def _parse_sina_line(line: str) -> Quote | None:
     """解析 var hq_str_sh600519="...";"""
     m = re.match(r'var\s+hq_str_([a-z]{2}\d+)="([^"]*)";?', line)
     if not m:
@@ -28,8 +30,13 @@ def _parse_sina_line(line: str) -> Optional[Quote]:
 
     code = symbol[2:]  # 去掉 sh/sz
     name = fields[0]
-    o, _, p, h, low = (float(fields[1]), float(fields[2]),
-                       float(fields[3]), float(fields[4]), float(fields[5]))
+    o, _, p, h, low = (
+        float(fields[1]),
+        float(fields[2]),
+        float(fields[3]),
+        float(fields[4]),
+        float(fields[5]),
+    )
     last_close = float(fields[2])
     change_pct = ((p - last_close) / last_close * 100) if last_close > 0 else 0
 
@@ -38,13 +45,18 @@ def _parse_sina_line(line: str) -> Optional[Quote]:
     ask_5 = [int(float(fields[20 + i] or 0)) for i in range(5)]
 
     return Quote(
-        code=code, name=name, price=round(p, 2),
+        code=code,
+        name=name,
+        price=round(p, 2),
         change_pct=round(change_pct, 2),
-        amount=float(fields[9] or 0),              # 成交额 (sina 是元, 直接用)
+        amount=float(fields[9] or 0),  # 成交额 (sina 是元, 直接用)
         volume=int(float(fields[8] or 0)) // 100,  # 成交量: sina 是股, /100 转手
-        open=o, high=h, low=low, last_close=last_close,
-        bid_5=[v // 100 for v in bid_5],            # 买量: 股 -> 手
-        ask_5=[v // 100 for v in ask_5],            # 卖量: 股 -> 手
+        open=o,
+        high=h,
+        low=low,
+        last_close=last_close,
+        bid_5=[v // 100 for v in bid_5],  # 买量: 股 -> 手
+        ask_5=[v // 100 for v in ask_5],  # 卖量: 股 -> 手
         timestamp=pd.Timestamp.now().to_pydatetime(),
         source="sina",
     )
@@ -58,7 +70,7 @@ class SinaAdapter(BaseAdapter):
     BASE_URL = "https://hq.sinajs.cn"
 
     def __init__(self):
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -68,7 +80,7 @@ class SinaAdapter(BaseAdapter):
             )
         return self._client
 
-    async def get_realtime_quote(self, codes: List[str]) -> List[Quote]:
+    async def get_realtime_quote(self, codes: list[str]) -> list[Quote]:
         sina_codes = [_to_sina_code(c) for c in codes]
         url = f"{self.BASE_URL}/list={','.join(sina_codes)}"
         try:
@@ -76,9 +88,9 @@ class SinaAdapter(BaseAdapter):
             resp = await client.get(url)
             resp.raise_for_status()
         except httpx.HTTPStatusError as e:
-            raise DataSourceError(f"HTTP {e.response.status_code}", source=self.name)
+            raise DataSourceError(f"HTTP {e.response.status_code}", source=self.name) from e
         except Exception as e:
-            raise DataSourceError(str(e), source=self.name)
+            raise DataSourceError(str(e), source=self.name) from e
 
         results = []
         for line in resp.text.strip().splitlines():
@@ -90,6 +102,11 @@ class SinaAdapter(BaseAdapter):
             results.append(q)
         return results
 
-    async def get_kline(self, code, period, count): return []
-    async def get_fundamental(self, code): return None
-    async def get_news(self, code, limit): return []
+    async def get_kline(self, code, period, count):
+        return []
+
+    async def get_fundamental(self, code):
+        return None
+
+    async def get_news(self, code, limit):
+        return []

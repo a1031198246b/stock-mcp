@@ -1,5 +1,6 @@
-from stock_mcp.logging_setup import setup_logging, get_logger
 import structlog
+
+from stock_mcp.logging_setup import get_logger, setup_logging
 
 
 def test_setup_logging_does_not_crash(monkeypatch):

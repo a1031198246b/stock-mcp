@@ -1,8 +1,9 @@
 import pytest
-from stock_mcp.tools.query import register
-from stock_mcp.domain.models import StockQueryResult
+
 from stock_mcp.adapters.iwencai import IwencaiAdapter
+from stock_mcp.domain.models import StockQueryResult
 from stock_mcp.services.query_service import QueryService
+from stock_mcp.tools.query import register
 
 
 class FakeIwencai(IwencaiAdapter):
@@ -10,6 +11,7 @@ class FakeIwencai(IwencaiAdapter):
         super().__init__()
         self.enabled = True
         self._results = results
+
     async def query_stocks(self, condition):
         return self._results
 
@@ -24,6 +26,7 @@ async def test_query_tool_returns_markdown():
     svc = QueryService(adapter)
 
     from fastmcp import FastMCP
+
     mcp = FastMCP("test")
     register(mcp, svc)
 

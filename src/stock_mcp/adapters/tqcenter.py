@@ -3,13 +3,15 @@
 依赖: 本机安装通达信客户端 + tqcenter 插件（默认在 TDX_PATH/PYPlugins/user/）
 如不可用, 适配器自动 disabled
 """
+
 import sys
 from pathlib import Path
-from typing import List, Optional
+
 import pandas as pd
+
 from ..config import get_settings
-from ..domain.models import Quote, Kline, Fundamental, NewsItem
 from ..domain.errors import DataSourceError, NotFoundError
+from ..domain.models import Fundamental, Kline, NewsItem, Quote
 from .base import BaseAdapter
 
 
@@ -57,6 +59,7 @@ class TqcenterAdapter(BaseAdapter):
                     pass
                 # 给 DLL 一点时间真正释放
                 import time as _time
+
                 _time.sleep(0.2)
 
                 self._tq.run_mode = mode
@@ -93,7 +96,7 @@ class TqcenterAdapter(BaseAdapter):
         # 去掉可能的前缀 sh/sz/bj
         for prefix in ("SH", "SZ", "BJ"):
             if c.startswith(prefix) and len(c) == len(prefix) + 6:
-                c = c[len(prefix):]
+                c = c[len(prefix) :]
                 break
         # 6位代码 -> 加市场后缀
         if len(c) == 6 and c.isdigit():
@@ -109,7 +112,7 @@ class TqcenterAdapter(BaseAdapter):
         # 兜底: 不知道的市场, 原样返回
         return c
 
-    async def get_realtime_quote(self, codes: List[str]) -> List[Quote]:
+    async def get_realtime_quote(self, codes: list[str]) -> list[Quote]:
         if not self._initialized:
             raise DataSourceError("tqcenter 未初始化", source=self.name)
 
@@ -126,26 +129,28 @@ class TqcenterAdapter(BaseAdapter):
                 now = float(snap.get("Now", 0))
                 last_close = float(snap.get("LastClose", 0))
                 change_pct = ((now - last_close) / last_close * 100) if last_close > 0 else 0
-                results.append(Quote(
-                    code=code.split(".")[0],
-                    name=info.get("Name", ""),
-                    price=round(now, 2),
-                    change_pct=round(change_pct, 2),
-                    amount=float(snap.get("Amount", 0)) * 10000,  # 万元 -> 元
-                    volume=int(float(snap.get("Volume", 0))),     # 已经是手
-                    open=float(snap.get("Open", 0)),
-                    high=float(snap.get("Max", 0)),
-                    low=float(snap.get("Min", 0)),
-                    last_close=last_close,
-                    bid_5=self._safe_int_list(snap.get("Buyv", []), 5),  # 已经是手
-                    ask_5=self._safe_int_list(snap.get("Sellv", []), 5),  # 已经是手
-                    timestamp=pd.Timestamp.now().to_pydatetime(),
-                    source=self.name,
-                ))
+                results.append(
+                    Quote(
+                        code=code.split(".")[0],
+                        name=info.get("Name", ""),
+                        price=round(now, 2),
+                        change_pct=round(change_pct, 2),
+                        amount=float(snap.get("Amount", 0)) * 10000,  # 万元 -> 元
+                        volume=int(float(snap.get("Volume", 0))),  # 已经是手
+                        open=float(snap.get("Open", 0)),
+                        high=float(snap.get("Max", 0)),
+                        low=float(snap.get("Min", 0)),
+                        last_close=last_close,
+                        bid_5=self._safe_int_list(snap.get("Buyv", []), 5),  # 已经是手
+                        ask_5=self._safe_int_list(snap.get("Sellv", []), 5),  # 已经是手
+                        timestamp=pd.Timestamp.now().to_pydatetime(),
+                        source=self.name,
+                    )
+                )
             except NotFoundError:
                 raise
             except Exception as e:
-                raise DataSourceError(str(e), source=self.name)
+                raise DataSourceError(str(e), source=self.name) from e
         return results
 
     # 周期映射: 我们的 period → tqcenter 合法 period
@@ -161,7 +166,7 @@ class TqcenterAdapter(BaseAdapter):
         "1M": "1mon",  # 月线
     }
 
-    async def get_kline(self, code: str, period: str, count: int) -> List[Kline]:
+    async def get_kline(self, code: str, period: str, count: int) -> list[Kline]:
         if not self._initialized:
             raise DataSourceError("tqcenter 未初始化", source=self.name)
         if period not in self._PERIOD_MAP:
@@ -177,11 +182,12 @@ class TqcenterAdapter(BaseAdapter):
                 stock_list=[tq_code],
                 period=tq_period,
                 count=count,
-                dividend_type='front',  # 前复权
+                dividend_type="front",  # 前复权
                 fill_data=True,
             )
             if not data or "error" in data:
                 return []
+
             # 兼容大小写: tqcenter 返回大写, 但防御性兼容小写
             def _col(d, *names):
                 for n in names:
@@ -231,25 +237,27 @@ class TqcenterAdapter(BaseAdapter):
                     except Exception:
                         return default
 
-                klines.append(Kline(
-                    code=code.split(".")[0],
-                    period=period,
-                    datetime=dt_obj,
-                    open=_scalar(opens, i),
-                    high=_scalar(highs, i),
-                    low=_scalar(lows, i),
-                    close=_scalar(closes, i),
-                    volume=int(_scalar(volumes, i)),
-                    amount=_scalar(amounts, i, 0.0),
-                    source=self.name,
-                ))
+                klines.append(
+                    Kline(
+                        code=code.split(".")[0],
+                        period=period,
+                        datetime=dt_obj,
+                        open=_scalar(opens, i),
+                        high=_scalar(highs, i),
+                        low=_scalar(lows, i),
+                        close=_scalar(closes, i),
+                        volume=int(_scalar(volumes, i)),
+                        amount=_scalar(amounts, i, 0.0),
+                        source=self.name,
+                    )
+                )
             return klines
         except DataSourceError:
             raise
         except Exception as e:
-            raise DataSourceError(str(e), source=self.name)
+            raise DataSourceError(str(e), source=self.name) from e
 
-    async def get_fundamental(self, code: str) -> Optional[Fundamental]:
+    async def get_fundamental(self, code: str) -> Fundamental | None:
         """从 tqcenter.get_stock_info + 实时价 拼出基本面
 
         tqcenter 本身不直接提供 PE/PB, 但提供:
@@ -292,19 +300,19 @@ class TqcenterAdapter(BaseAdapter):
         # - 我们的 model 市值单位"亿元", = price * 总股本(股) / 1e8
         #   = price * J_zgb(万股) * 10000 / 1e8
         #   = price * J_zgb / 10000
-        total_shares_wan = _f(info, "J_zgb")           # 万股
-        total_shares_yi = total_shares_wan / 10000.0    # 亿股 (model 字段)
+        total_shares_wan = _f(info, "J_zgb")  # 万股
+        total_shares_yi = total_shares_wan / 10000.0  # 亿股 (model 字段)
         market_cap = price * total_shares_wan / 10000.0  # 亿元 (model 字段)
         # 注意: 万 * 元 / 10000 = 亿元, 这里写 price * J_zgb / 10000
 
-        eps = _f(info, "J_mgsy")              # 元/股
-        bps = _f(info, "J_mgjzc")             # 元/股
+        eps = _f(info, "J_mgsy")  # 元/股
+        bps = _f(info, "J_mgjzc")  # 元/股
         pe = price / eps if eps > 0 else 0.0  # 用最新季报 EPS 算 (注: 不是 TTM)
         pb = price / bps if bps > 0 else 0.0
 
         # ROE 近似: 净利润 / 净资产
-        jly = _f(info, "J_jly")    # 净利润, 元
-        jzc = _f(info, "J_jzc")    # 净资产, 元
+        jly = _f(info, "J_jly")  # 净利润, 元
+        jzc = _f(info, "J_jzc")  # 净资产, 元
         roe = (jly / jzc) if jzc > 0 else 0.0
 
         # 行业代码: tqcenter 给的是 TDX 内部数字, 名称映射是 TDX 私有表
@@ -320,7 +328,7 @@ class TqcenterAdapter(BaseAdapter):
             name=info.get("Name", ""),
             pe=round(pe, 2) if pe > 0 else None,
             pb=round(pb, 2) if pb > 0 else None,
-            roe=round(roe, 4) if roe > 0 else None,   # ROE 是小数 (0.15 = 15%)
+            roe=round(roe, 4) if roe > 0 else None,  # ROE 是小数 (0.15 = 15%)
             total_shares=round(total_shares_yi, 4) if total_shares_yi > 0 else None,
             market_cap=round(market_cap, 2) if market_cap > 0 else None,
             industry=industry,
@@ -332,7 +340,7 @@ class TqcenterAdapter(BaseAdapter):
     # 硬编码容易错 (我之前编的 45 个有近一半错). 上层 (UI / iwencai / akshare) 拿到后
     # 可查公开的证监会行业分类做转换. 这里只保证 raw code 正确.
 
-    async def get_news(self, code: str, limit: int) -> List[NewsItem]:
+    async def get_news(self, code: str, limit: int) -> list[NewsItem]:
         """P1 阶段先返回空"""
         return []
 
@@ -347,7 +355,7 @@ class TqcenterAdapter(BaseAdapter):
         return {}
 
     @staticmethod
-    def _safe_int_list(v, n: int) -> List[int]:
+    def _safe_int_list(v, n: int) -> list[int]:
         out = []
         for i in range(n):
             try:

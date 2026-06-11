@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import patch
+
 import pandas as pd
+import pytest
+
 from stock_mcp.adapters.akshare_source import AkshareAdapter
 
 
@@ -12,13 +14,15 @@ def mock_akshare():
 
 @pytest.mark.asyncio
 async def test_get_fundamental_a_share(mock_akshare):
-    mock_akshare.stock_a_indicator_lg.return_value = pd.DataFrame({
-        "code": ["600519"],
-        "pe": [25.5],
-        "pb": [8.2],
-        "总股本": [12.56],   # 亿
-        "总市值": [18840.0],  # 亿
-    })
+    mock_akshare.stock_a_indicator_lg.return_value = pd.DataFrame(
+        {
+            "code": ["600519"],
+            "pe": [25.5],
+            "pb": [8.2],
+            "总股本": [12.56],  # 亿
+            "总市值": [18840.0],  # 亿
+        }
+    )
     a = AkshareAdapter()
     fund = await a.get_fundamental("600519")
     assert fund is not None
@@ -28,15 +32,17 @@ async def test_get_fundamental_a_share(mock_akshare):
 
 @pytest.mark.asyncio
 async def test_get_kline_daily(mock_akshare):
-    mock_akshare.stock_zh_a_hist.return_value = pd.DataFrame({
-        "日期": ["2026-06-10", "2026-06-09"],
-        "开盘": [100, 99],
-        "最高": [105, 102],
-        "最低": [99, 98],
-        "收盘": [103, 100],
-        "成交量": [1000, 1500],
-        "成交额": [1e7, 1.5e7],
-    })
+    mock_akshare.stock_zh_a_hist.return_value = pd.DataFrame(
+        {
+            "日期": ["2026-06-10", "2026-06-09"],
+            "开盘": [100, 99],
+            "最高": [105, 102],
+            "最低": [99, 98],
+            "收盘": [103, 100],
+            "成交量": [1000, 1500],
+            "成交额": [1e7, 1.5e7],
+        }
+    )
     a = AkshareAdapter()
     klines = await a.get_kline("600519", "1d", 2)
     assert len(klines) == 2

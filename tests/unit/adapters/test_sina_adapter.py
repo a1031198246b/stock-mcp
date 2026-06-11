@@ -1,9 +1,11 @@
 import json
+from pathlib import Path
+
 import pytest
 import respx
+
 from stock_mcp.adapters.sina import SinaAdapter
 from stock_mcp.domain.errors import DataSourceError, ParseError
-from pathlib import Path
 
 
 @pytest.fixture

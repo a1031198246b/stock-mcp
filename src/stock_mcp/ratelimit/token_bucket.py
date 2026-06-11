@@ -1,7 +1,7 @@
 """令牌桶限流器"""
+
 import asyncio
 import time
-from typing import Optional
 
 
 class TokenBucket:
@@ -22,7 +22,7 @@ class TokenBucket:
         )
         self._last_refill = now
 
-    async def acquire(self, timeout: Optional[float] = None) -> bool:
+    async def acquire(self, timeout: float | None = None) -> bool:
         async with self._lock:
             self._refill()
             if self._tokens >= 1:

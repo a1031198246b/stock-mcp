@@ -1,14 +1,16 @@
-import pytest
 import tempfile
-from pathlib import Path
 from datetime import datetime
-from stock_mcp.services.quote_service import QuoteService
+from pathlib import Path
+
+import pytest
+
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
-from stock_mcp.domain.models import Quote
 from stock_mcp.cache.sqlite_cache import SQLiteCache
 from stock_mcp.cache.ttl import TTLCalculator
 from stock_mcp.domain.errors import DataSourceError
+from stock_mcp.domain.models import Quote
+from stock_mcp.services.quote_service import QuoteService
 
 
 class FakeAdapter(BaseAdapter):
@@ -23,16 +25,32 @@ class FakeAdapter(BaseAdapter):
         self.call_count += 1
         return [q for q in self._quotes if q.code in codes]
 
-    async def get_kline(self, code, period, count): return []
-    async def get_fundamental(self, code): return None
-    async def get_news(self, code, limit): return []
+    async def get_kline(self, code, period, count):
+        return []
+
+    async def get_fundamental(self, code):
+        return None
+
+    async def get_news(self, code, limit):
+        return []
 
 
 def make_quote(code, source="x"):
     return Quote(
-        code=code, name=code, price=10.0, change_pct=1.0,
-        amount=1e6, volume=100, open=10, high=10, low=10, last_close=9.9,
-        bid_5=[1]*5, ask_5=[1]*5, timestamp=datetime.now(), source=source,
+        code=code,
+        name=code,
+        price=10.0,
+        change_pct=1.0,
+        amount=1e6,
+        volume=100,
+        open=10,
+        high=10,
+        low=10,
+        last_close=9.9,
+        bid_5=[1] * 5,
+        ask_5=[1] * 5,
+        timestamp=datetime.now(),
+        source=source,
     )
 
 

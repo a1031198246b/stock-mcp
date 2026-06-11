@@ -1,7 +1,9 @@
 """查询类 MCP 工具 - 自然语言选股、回测"""
+
 from fastmcp import FastMCP
+
+from ..domain.errors import AuthError, DataSourceError
 from ..services.query_service import QueryService
-from ..domain.errors import DataSourceError, AuthError
 
 
 def register(mcp: FastMCP, service: QueryService) -> None:
@@ -33,8 +35,6 @@ def register(mcp: FastMCP, service: QueryService) -> None:
             "|------|------|---------|",
         ]
         for r in results[:100]:  # 限制 100 条
-            matched_str = ", ".join(
-                f"{k}={v}" for k, v in list(r.matched_fields.items())[:3]
-            )
+            matched_str = ", ".join(f"{k}={v}" for k, v in list(r.matched_fields.items())[:3])
             lines.append(f"| {r.code} | {r.name} | {matched_str} |")
         return "\n".join(lines)

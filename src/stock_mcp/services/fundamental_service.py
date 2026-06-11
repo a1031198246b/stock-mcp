@@ -1,9 +1,9 @@
 """基本面服务"""
-from typing import Optional
-from ..domain.models import Fundamental
+
 from ..adapters.registry import AdapterRegistry
 from ..cache.sqlite_cache import SQLiteCache
 from ..cache.ttl import TTLCalculator
+from ..domain.models import Fundamental
 
 
 class FundamentalService:
@@ -12,7 +12,7 @@ class FundamentalService:
         self._cache = cache
         self._ttl_calc = ttl_calc
 
-    async def get_fundamental(self, code: str) -> Optional[Fundamental]:
+    async def get_fundamental(self, code: str) -> Fundamental | None:
         key = f"fundamental:{code}"
         cached = await self._cache.get(key)
         if cached:

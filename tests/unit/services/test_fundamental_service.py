@@ -1,12 +1,14 @@
-import pytest
 import tempfile
 from pathlib import Path
-from stock_mcp.services.fundamental_service import FundamentalService
+
+import pytest
+
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
-from stock_mcp.domain.models import Fundamental
 from stock_mcp.cache.sqlite_cache import SQLiteCache
 from stock_mcp.cache.ttl import TTLCalculator
+from stock_mcp.domain.models import Fundamental
+from stock_mcp.services.fundamental_service import FundamentalService
 
 
 class FakeFundAdapter(BaseAdapter):
@@ -15,11 +17,18 @@ class FakeFundAdapter(BaseAdapter):
         self.name = "fake"
         self.priority = 1
         self.enabled = True
-    async def get_realtime_quote(self, codes): return []
-    async def get_kline(self, code, period, count): return []
+
+    async def get_realtime_quote(self, codes):
+        return []
+
+    async def get_kline(self, code, period, count):
+        return []
+
     async def get_fundamental(self, code):
         return self._f if code == self._f.code else None
-    async def get_news(self, code, limit): return []
+
+    async def get_news(self, code, limit):
+        return []
 
 
 @pytest.fixture

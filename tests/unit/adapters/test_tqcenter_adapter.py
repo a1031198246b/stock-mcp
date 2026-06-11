@@ -1,6 +1,8 @@
 import sys
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from stock_mcp.adapters.tqcenter import TqcenterAdapter
 from stock_mcp.domain.errors import DataSourceError
 
@@ -62,20 +64,26 @@ async def test_get_realtime_quote_normalizes_fields(fake_tqcenter, monkeypatch):
     a = TqcenterAdapter()
     a.initialize()
 
-    fake_tqcenter.tq.get_market_snapshot = MagicMock(return_value={
-        "Now": 1500.0,
-        "LastClose": 1463.5,
-        "Amount": 1.2e9,
-        "Volume": 10000,
-        "Open": 1480.0,
-        "Max": 1510.0,
-        "Min": 1475.0,
-        "Buyv": [100, 200, 300, 400, 500],
-        "Sellv": [150, 250, 350, 450, 550],
-    })
-    fake_tqcenter.tq.get_stock_info = MagicMock(return_value={
-        "ErrorId": "0", "Name": "贵州茅台", "J_zgb": 0,  # 总股本（万）— 0
-    })
+    fake_tqcenter.tq.get_market_snapshot = MagicMock(
+        return_value={
+            "Now": 1500.0,
+            "LastClose": 1463.5,
+            "Amount": 1.2e9,
+            "Volume": 10000,
+            "Open": 1480.0,
+            "Max": 1510.0,
+            "Min": 1475.0,
+            "Buyv": [100, 200, 300, 400, 500],
+            "Sellv": [150, 250, 350, 450, 550],
+        }
+    )
+    fake_tqcenter.tq.get_stock_info = MagicMock(
+        return_value={
+            "ErrorId": "0",
+            "Name": "贵州茅台",
+            "J_zgb": 0,  # 总股本（万）— 0
+        }
+    )
 
     quotes = await a.get_realtime_quote(["600519"])
     assert len(quotes) == 1
@@ -100,13 +108,14 @@ async def test_health_check_failure_returns_false(fake_tqcenter, monkeypatch):
 
 # ============== get_fundamental 测试 ==============
 
+
 def _make_stock_info(
-    j_zgb: str = "125008.16",     # 万股
-    j_mgsy: str = "87.17",         # 元/股
-    j_mgjzc: str = "216.32",       # 元/股
-    j_jzc: str = "27089404.00",    # 元
-    j_jly: str = "2724251.25",     # 元
-    j_hy=37,                       # 行业代码
+    j_zgb: str = "125008.16",  # 万股
+    j_mgsy: str = "87.17",  # 元/股
+    j_mgjzc: str = "216.32",  # 元/股
+    j_jzc: str = "27089404.00",  # 元
+    j_jly: str = "2724251.25",  # 元
+    j_hy=37,  # 行业代码
     name="贵州茅台",
     error_id="0",
 ):
@@ -160,7 +169,9 @@ async def test_get_fundamental_returns_none_on_error_response(fake_tqcenter, mon
     a = TqcenterAdapter()
     a.initialize()
 
-    fake_tqcenter.tq.get_stock_info = MagicMock(return_value={"ErrorId": "11", "Error": "no such code"})
+    fake_tqcenter.tq.get_stock_info = MagicMock(
+        return_value={"ErrorId": "11", "Error": "no such code"}
+    )
     f = await a.get_fundamental("600519")
     assert f is None
 
@@ -172,19 +183,24 @@ async def test_get_fundamental_handles_string_numbers(fake_tqcenter, monkeypatch
     a = TqcenterAdapter()
     a.initialize()
 
-    fake_tqcenter.tq.get_stock_info = MagicMock(return_value=_make_stock_info(
-        j_zgb="100000.00", j_mgsy="10.0", j_mgjzc="20.0",
-        j_jzc="200000.00", j_jly="10000.00",
-    ))
+    fake_tqcenter.tq.get_stock_info = MagicMock(
+        return_value=_make_stock_info(
+            j_zgb="100000.00",
+            j_mgsy="10.0",
+            j_mgjzc="20.0",
+            j_jzc="200000.00",
+            j_jly="10000.00",
+        )
+    )
     fake_tqcenter.tq.get_market_snapshot = MagicMock(return_value={"Now": 100.0})
 
     f = await a.get_fundamental("000001")
     assert f is not None
-    assert f.pe == 10.0    # 100 / 10
-    assert f.pb == 5.0     # 100 / 20
-    assert f.roe == 0.05   # 10000 / 200000
-    assert f.total_shares == 10.0   # 100000 万股 = 10 亿股
-    assert f.market_cap == 1000.0   # 100 * 100000 / 10000
+    assert f.pe == 10.0  # 100 / 10
+    assert f.pb == 5.0  # 100 / 20
+    assert f.roe == 0.05  # 10000 / 200000
+    assert f.total_shares == 10.0  # 100000 万股 = 10 亿股
+    assert f.market_cap == 1000.0  # 100 * 100000 / 10000
 
 
 @pytest.mark.asyncio
@@ -194,9 +210,12 @@ async def test_get_fundamental_handles_zero_eps(fake_tqcenter, monkeypatch):
     a = TqcenterAdapter()
     a.initialize()
 
-    fake_tqcenter.tq.get_stock_info = MagicMock(return_value=_make_stock_info(
-        j_mgsy="0.0", j_mgjzc="5.0",
-    ))
+    fake_tqcenter.tq.get_stock_info = MagicMock(
+        return_value=_make_stock_info(
+            j_mgsy="0.0",
+            j_mgjzc="5.0",
+        )
+    )
     fake_tqcenter.tq.get_market_snapshot = MagicMock(return_value={"Now": 50.0})
 
     f = await a.get_fundamental("688999")
@@ -226,9 +245,7 @@ async def test_get_fundamental_returns_none_when_dll_raises(fake_tqcenter, monke
     a = TqcenterAdapter()
     a.initialize()
 
-    fake_tqcenter.tq.get_stock_info = MagicMock(
-        side_effect=Exception("股票代码格式错误: 999999")
-    )
+    fake_tqcenter.tq.get_stock_info = MagicMock(side_effect=Exception("股票代码格式错误: 999999"))
     f = await a.get_fundamental("999999")
     assert f is None
 
@@ -292,14 +309,16 @@ async def test_get_kline_normalizes_fields(fake_tqcenter, monkeypatch):
     # dict[字段名] -> DataFrame (columns=[股票代码], index=DatetimeIndex)
     times = pd.DatetimeIndex(["2026-06-10", "2026-06-11"])
     columns = ["600519.SH"]
-    fake_tqcenter.tq.get_market_data = MagicMock(return_value={
-        "Open":   pd.DataFrame([100, 103], index=times, columns=columns),
-        "High":   pd.DataFrame([105, 108], index=times, columns=columns),
-        "Low":    pd.DataFrame([99, 102],  index=times, columns=columns),
-        "Close":  pd.DataFrame([103, 107], index=times, columns=columns),
-        "Volume": pd.DataFrame([1000, 1500], index=times, columns=columns),
-        "Amount": pd.DataFrame([1e7, 1.5e7], index=times, columns=columns),
-    })
+    fake_tqcenter.tq.get_market_data = MagicMock(
+        return_value={
+            "Open": pd.DataFrame([100, 103], index=times, columns=columns),
+            "High": pd.DataFrame([105, 108], index=times, columns=columns),
+            "Low": pd.DataFrame([99, 102], index=times, columns=columns),
+            "Close": pd.DataFrame([103, 107], index=times, columns=columns),
+            "Volume": pd.DataFrame([1000, 1500], index=times, columns=columns),
+            "Amount": pd.DataFrame([1e7, 1.5e7], index=times, columns=columns),
+        }
+    )
 
     klines = await a.get_kline("600519", "1d", 2)
     assert len(klines) == 2
@@ -323,9 +342,11 @@ async def test_get_kline_returns_empty_when_core_fields_missing(fake_tqcenter, m
     a.initialize()
 
     # 缺 Open/Close 字段 (tqcenter 非交易时段返回)
-    fake_tqcenter.tq.get_market_data = MagicMock(return_value={
-        "Volume": [],
-    })
+    fake_tqcenter.tq.get_market_data = MagicMock(
+        return_value={
+            "Volume": [],
+        }
+    )
     klines = await a.get_kline("600519", "1d", 5)
     assert klines == []
 
@@ -337,10 +358,12 @@ async def test_get_kline_handles_error_dict(fake_tqcenter, monkeypatch):
     a = TqcenterAdapter()
     a.initialize()
 
-    fake_tqcenter.tq.get_market_data = MagicMock(return_value={
-        "error": -5,
-        "msg": "周期格式错误",
-    })
+    fake_tqcenter.tq.get_market_data = MagicMock(
+        return_value={
+            "error": -5,
+            "msg": "周期格式错误",
+        }
+    )
     klines = await a.get_kline("600519", "1d", 5)
     assert klines == []
 

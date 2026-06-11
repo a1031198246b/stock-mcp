@@ -1,4 +1,5 @@
 """tools/__init__.py 单元测试 — register_all_tools 注册逻辑"""
+
 from unittest.mock import MagicMock
 
 import pytest

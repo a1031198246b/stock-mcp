@@ -1,6 +1,8 @@
 import sys
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from stock_mcp.adapters.iwencai import IwencaiAdapter
 from stock_mcp.domain.errors import AuthError
 
@@ -30,11 +32,14 @@ async def test_iwencai_disabled_without_cookie(fake_pywencai, monkeypatch):
 async def test_iwencai_query_stocks(fake_pywencai, monkeypatch):
     monkeypatch.setenv("IWENCAI_COOKIE", "v=123")
     import pandas as pd
-    fake_pywencai.get.return_value = pd.DataFrame({
-        "股票代码": ["600519", "000001"],
-        "股票名称": ["贵州茅台", "平安银行"],
-        "ROE": [0.30, 0.12],
-    })
+
+    fake_pywencai.get.return_value = pd.DataFrame(
+        {
+            "股票代码": ["600519", "000001"],
+            "股票名称": ["贵州茅台", "平安银行"],
+            "ROE": [0.30, 0.12],
+        }
+    )
     a = IwencaiAdapter()
     a.initialize()
 

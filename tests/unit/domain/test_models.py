@@ -1,11 +1,13 @@
 from datetime import datetime
+
 import pytest
 from pydantic import ValidationError
+
 from stock_mcp.domain.models import (
-    Quote,
-    Kline,
     Fundamental,
+    Kline,
     NewsItem,
+    Quote,
     StockQueryResult,
 )
 
@@ -35,18 +37,32 @@ def test_quote_optional_source_default():
     """timestamp 必填, source 可选"""
     with pytest.raises(ValidationError):
         Quote(
-            code="600519", name="x", price=1.0, change_pct=0, amount=0,
-            volume=0, open=1, high=1, low=1, last_close=1,
-            bid_5=[0]*5, ask_5=[0]*5,
+            code="600519",
+            name="x",
+            price=1.0,
+            change_pct=0,
+            amount=0,
+            volume=0,
+            open=1,
+            high=1,
+            low=1,
+            last_close=1,
+            bid_5=[0] * 5,
+            ask_5=[0] * 5,
         )  # 缺 timestamp
 
 
 def test_kline_fields():
     k = Kline(
-        code="600519", period="1d",
+        code="600519",
+        period="1d",
         datetime=datetime(2026, 6, 10),
-        open=100, high=105, low=99, close=103,
-        volume=1000000, amount=1e8,
+        open=100,
+        high=105,
+        low=99,
+        close=103,
+        volume=1000000,
+        amount=1e8,
     )
     assert k.period == "1d"
 
@@ -59,15 +75,19 @@ def test_fundamental_optional_fields():
 
 def test_news_item_optional_code():
     n = NewsItem(
-        code=None, title="市场快讯", url="https://example.com",
-        publish_time=datetime(2026, 6, 10), source="eastmoney",
+        code=None,
+        title="市场快讯",
+        url="https://example.com",
+        publish_time=datetime(2026, 6, 10),
+        source="eastmoney",
     )
     assert n.code is None
 
 
 def test_stock_query_result():
     r = StockQueryResult(
-        code="600519", name="x",
+        code="600519",
+        name="x",
         matched_fields={"ROE": 0.15, "pe": 25.0},
     )
     assert r.matched_fields["ROE"] == 0.15

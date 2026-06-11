@@ -1,4 +1,5 @@
 import pytest
+
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.domain.models import Quote
 
@@ -9,12 +10,23 @@ class DummyAdapter(BaseAdapter):
     enabled = True
 
     async def get_realtime_quote(self, codes):
-        return [Quote(
-            code=codes[0], name="x", price=1.0, change_pct=0,
-            amount=0, volume=0, open=1, high=1, low=1, last_close=1,
-            bid_5=[0]*5, ask_5=[0]*5,
-            timestamp=pytest.importorskip("datetime").datetime.now(),
-        )]
+        return [
+            Quote(
+                code=codes[0],
+                name="x",
+                price=1.0,
+                change_pct=0,
+                amount=0,
+                volume=0,
+                open=1,
+                high=1,
+                low=1,
+                last_close=1,
+                bid_5=[0] * 5,
+                ask_5=[0] * 5,
+                timestamp=pytest.importorskip("datetime").datetime.now(),
+            )
+        ]
 
     async def get_kline(self, code, period, count):
         return []
@@ -29,6 +41,7 @@ class DummyAdapter(BaseAdapter):
 @pytest.mark.asyncio
 async def test_abstract_methods_must_be_implemented():
     """未实现抽象方法的子类不能实例化"""
+
     class Incomplete(BaseAdapter):
         name = "x"
         priority = 1

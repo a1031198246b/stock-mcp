@@ -1,14 +1,15 @@
 """TTL 计算 - 不同数据类型用不同 TTL 策略"""
+
 from dataclasses import dataclass
 
 
 @dataclass
 class TTLConfig:
-    realtime_quote: int = 3        # 实时行情 3 秒
-    kline_daily: int = 86400       # 日线 1 天
-    kline_minute: int = 60         # 分钟线 60 秒
-    fundamental: int = 86400       # 基本面 1 天
-    news: int = 600                # 资讯 10 分钟
+    realtime_quote: int = 3  # 实时行情 3 秒
+    kline_daily: int = 86400  # 日线 1 天
+    kline_minute: int = 60  # 分钟线 60 秒
+    fundamental: int = 86400  # 基本面 1 天
+    news: int = 600  # 资讯 10 分钟
 
 
 class TTLCalculator:

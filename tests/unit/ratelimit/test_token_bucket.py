@@ -1,5 +1,7 @@
 import asyncio
+
 import pytest
+
 from stock_mcp.ratelimit.token_bucket import TokenBucket
 
 
@@ -32,6 +34,7 @@ async def test_acquire_no_token_returns_false_immediately():
     await tb.acquire()
     # 此时 token 用完
     import time
+
     start = time.monotonic()
     result = await tb.acquire()  # 默认 timeout=None
     elapsed = time.monotonic() - start
@@ -63,6 +66,7 @@ async def test_acquire_with_short_timeout_returns_false():
     await tb.acquire()
     # timeout = 0.05s < refill 时间 1.0s, 应立即 False
     import time
+
     start = time.monotonic()
     result = await tb.acquire(timeout=0.05)
     elapsed = time.monotonic() - start

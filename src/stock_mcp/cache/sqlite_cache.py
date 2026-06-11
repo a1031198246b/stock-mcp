@@ -1,9 +1,11 @@
 """基于 SQLite 的缓存 - 异步、TTL、模式删除"""
-import time
+
 import fnmatch
-import aiosqlite
+import time
 from pathlib import Path
-from typing import Optional
+
+import aiosqlite
+
 from ..logging_setup import get_logger
 
 log = get_logger(__name__)
@@ -30,7 +32,7 @@ class SQLiteCache:
             await db.commit()
         self._initialized = True
 
-    async def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> str | None:
         try:
             await self._ensure_schema()
             async with aiosqlite.connect(self._db_path) as db:

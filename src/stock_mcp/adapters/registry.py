@@ -1,15 +1,17 @@
 """适配器注册表 - 负责优先级排序、fan-out fallback"""
-from typing import List, Any
+
+from typing import Any
+
 from ..domain.errors import DataSourceError
 from .base import BaseAdapter
 
 
 class AdapterRegistry:
-    def __init__(self, adapters: List[BaseAdapter]):
+    def __init__(self, adapters: list[BaseAdapter]):
         self._adapters = list(adapters)
         self._unhealthy: dict[str, float] = {}  # name -> 恢复时间戳
 
-    def adapters_in_order(self) -> List[BaseAdapter]:
+    def adapters_in_order(self) -> list[BaseAdapter]:
         """按优先级排序，跳过 disabled / unhealthy"""
         return sorted(
             (a for a in self._adapters if a.enabled and a.name not in self._unhealthy),
@@ -19,6 +21,7 @@ class AdapterRegistry:
     def mark_unhealthy(self, name: str, recovery_seconds: int = 300) -> None:
         """标记一个适配器为不健康"""
         import time
+
         self._unhealthy[name] = time.time() + recovery_seconds
 
     def mark_healthy(self, name: str) -> None:
@@ -26,6 +29,7 @@ class AdapterRegistry:
 
     def is_unhealthy(self, name: str) -> bool:
         import time
+
         deadline = self._unhealthy.get(name)
         if deadline is None:
             return False

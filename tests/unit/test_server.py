@@ -2,7 +2,8 @@
 
 使用 mock 替换所有外部适配器, 避免依赖 TDX_PATH / iwencai cookie / 网络。
 """
-from unittest.mock import AsyncMock, MagicMock, patch
+
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastmcp import FastMCP
@@ -14,6 +15,7 @@ def mock_adapters(monkeypatch, temp_cache_dir, mock_env):
 
     返回 (mcp, services) 元组, 供测试验证装配结果。
     """
+
     # Mock 所有适配器类, 让它们的 __init__ 和 initialize 不做真实工作
     def _make_mock_adapter_class(name: str):
         cls = MagicMock()
@@ -77,6 +79,7 @@ def test_create_server_registers_ping_tool(mock_adapters):
     mcp = create_server()
     # 使用 list_tools 验证（同步方式需在事件循环中）
     import asyncio
+
     tools = asyncio.run(mcp.list_tools())
     names = {t.name for t in tools}
     assert "ping" in names
@@ -84,8 +87,9 @@ def test_create_server_registers_ping_tool(mock_adapters):
 
 def test_create_server_registers_all_data_tools(mock_adapters):
     """create_server() 应注册所有数据类工具"""
-    from stock_mcp.server import create_server
     import asyncio
+
+    from stock_mcp.server import create_server
 
     mcp = create_server()
     tools = asyncio.run(mcp.list_tools())
@@ -106,7 +110,6 @@ def test_create_server_registers_all_data_tools(mock_adapters):
 def test_create_server_passes_all_adapters_to_registry(mock_adapters):
     """AdapterRegistry 应收到 5 个适配器实例"""
     from stock_mcp.server import create_server
-    from stock_mcp.adapters.registry import AdapterRegistry
 
     # 通过 patch AdapterRegistry 抓取构造参数
     captured = {}
@@ -116,6 +119,7 @@ def test_create_server_passes_all_adapters_to_registry(mock_adapters):
             captured["adapters"] = adapters
 
     import stock_mcp.server as server_module
+
     with patch.object(server_module, "AdapterRegistry", FakeRegistry):
         create_server()
 

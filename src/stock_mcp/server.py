@@ -1,21 +1,23 @@
 """MCP Server 入口 - stdio 模式"""
+
 from fastmcp import FastMCP
-from .config import get_settings
-from .logging_setup import setup_logging
-from .tools import register_all_tools
-from .adapters.tqcenter import TqcenterAdapter
-from .adapters.sina import SinaAdapter
+
 from .adapters.akshare_source import AkshareAdapter
 from .adapters.eastmoney import EastmoneyAdapter
 from .adapters.iwencai import IwencaiAdapter
 from .adapters.registry import AdapterRegistry
+from .adapters.sina import SinaAdapter
+from .adapters.tqcenter import TqcenterAdapter
 from .cache.sqlite_cache import SQLiteCache
 from .cache.ttl import TTLCalculator
-from .services.quote_service import QuoteService
-from .services.kline_service import KlineService
+from .config import get_settings
+from .logging_setup import setup_logging
 from .services.fundamental_service import FundamentalService
+from .services.kline_service import KlineService
 from .services.news_service import NewsService
 from .services.query_service import QueryService
+from .services.quote_service import QuoteService
+from .tools import register_all_tools
 
 
 def create_server() -> FastMCP:

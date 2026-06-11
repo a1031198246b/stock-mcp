@@ -8,8 +8,8 @@
 
 如果通达信或网络不可用, 部分测试会 skip, 但其他工具应该都能用 fallback
 """
+
 import json
-import os
 import re
 import subprocess
 import sys
@@ -49,7 +49,6 @@ def _send(server, req, timeout=10):
     server.stdin.write((json.dumps(req) + "\n").encode("utf-8"))
     server.stdin.flush()
     # 用 select 实现非阻塞读 + 超时
-    import select
     if hasattr(server.stdout, "readline"):
         line = server.stdout.readline()
     else:
@@ -63,27 +62,39 @@ def _send(server, req, timeout=10):
 
 def _initialize(server):
     """完整握手: initialize + initialized"""
-    init_resp = _send(server, {
-        "jsonrpc": "2.0", "id": 1, "method": "initialize",
-        "params": {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "e2e-test", "version": "0.1"},
-        }
-    })
+    init_resp = _send(
+        server,
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "e2e-test", "version": "0.1"},
+            },
+        },
+    )
     assert "result" in init_resp
-    server.stdin.write((json.dumps({
-        "jsonrpc": "2.0", "method": "notifications/initialized"
-    }) + "\n").encode("utf-8"))
+    server.stdin.write(
+        (json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n").encode(
+            "utf-8"
+        )
+    )
     server.stdin.flush()
 
 
 def _call_tool(server, name, args, req_id=2):
     """tools/call, 返回 (text, error)"""
-    resp = _send(server, {
-        "jsonrpc": "2.0", "id": req_id, "method": "tools/call",
-        "params": {"name": name, "arguments": args},
-    })
+    resp = _send(
+        server,
+        {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": args},
+        },
+    )
     if "error" in resp:
         return None, resp["error"]
     result = resp.get("result", {})
@@ -94,15 +105,21 @@ def _call_tool(server, name, args, req_id=2):
 
 # ============== 协议层 ==============
 
+
 def test_mcp_protocol_handshake_and_tool_registration(server):
     """完整握手 + 验证 6 个工具都注册"""
     _initialize(server)
-    resp = _send(server, {
-        "jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}
-    })
+    resp = _send(server, {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
     tools = resp.get("result", {}).get("tools", [])
     tool_names = {t["name"] for t in tools}
-    expected = {"ping", "get_realtime_quote", "get_kline", "get_fundamental", "get_news", "query_stocks"}
+    expected = {
+        "ping",
+        "get_realtime_quote",
+        "get_kline",
+        "get_fundamental",
+        "get_news",
+        "query_stocks",
+    }
     assert expected.issubset(tool_names), f"缺少工具: {expected - tool_names}"
 
 
@@ -118,6 +135,7 @@ def test_ping_tool_works(server):
 
 
 # ============== 数据工具 (真实数据) ==============
+
 
 def test_get_realtime_quote_e2e_maotai(server):
     """E2E: 通过 MCP 协议查询茅台真实股价"""
@@ -190,6 +208,7 @@ def test_query_stocks_e2e_graceful_degradation(server):
 
 
 # ============== 错误处理 ==============
+
 
 def test_invalid_tool_name_returns_error_gracefully(server):
     """调用不存在的工具, 不应让 server 崩溃"""
