@@ -5,7 +5,7 @@
 - Python 3.11+
 - uv (包管理)
 - 通达信客户端 (可选, 用于 tqcenter 集成测试)
-- Node.js 16+ (可选, 用于 iwencai)
+- Node.js 16+ (可选, 用于 iwencai; cookie 可选, 无 cookie 用匿名模式)
 
 ## 本地开发
 

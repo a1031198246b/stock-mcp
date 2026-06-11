@@ -1,6 +1,9 @@
 """爱问财（iWencai）适配器 - 自然语言选股、回测
 
 依赖: pywencai (需 Node.js 16+)
+
+Cookie 是可选的: 未配置时 pywencai 以匿名模式运行, 数据可能不完整
+但仍可使用 (例如 ``今日涨停``、``市值<100亿`` 都能返回结果).
 """
 
 import pandas as pd
@@ -22,9 +25,6 @@ class IwencaiAdapter(BaseAdapter):
         self._pywencai = None
 
     def initialize(self) -> None:
-        settings = get_settings()
-        if not settings.iwencai_cookie:
-            return
         try:
             import pywencai
         except ImportError:
@@ -47,18 +47,24 @@ class IwencaiAdapter(BaseAdapter):
     async def query_stocks(self, condition: str) -> list[StockQueryResult]:
         if not self.enabled:
             raise DataSourceError(
-                "iwencai 未启用 (cookie 缺失或 pywencai 未安装)", source=self.name
+                "iwencai 未启用 (pywencai 未安装)", source=self.name
             )
         settings = get_settings()
+        # 把空串 (常见于 .env 里留 ``IWENCAI_COOKIE=``) 也视为未配置
+        cookie = settings.iwencai_cookie or None
         try:
             df = self._pywencai.get(
                 question=condition,
-                cookie=settings.iwencai_cookie,
+                cookie=cookie,
                 loop=True,  # 自动翻页
             )
         except Exception as e:
             msg = str(e)
-            if "登录" in msg or "cookie" in msg.lower() or "expired" in msg.lower():
+            # 仅当 cookie 已配置且 pywencai 提示登录/cookie 相关错误时,
+            # 才视为认证问题. 匿名模式下出现的错误归类为数据源错误.
+            if cookie and (
+                "登录" in msg or "cookie" in msg.lower() or "expired" in msg.lower()
+            ):
                 raise AuthError(msg, source=self.name) from e
             raise DataSourceError(msg, source=self.name) from e
 
