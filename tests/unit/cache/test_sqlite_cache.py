@@ -69,3 +69,17 @@ async def test_write_failure_does_not_crash(temp_cache_dir, monkeypatch):
     # get should also not raise
     val = await cache.get("k1")
     assert val is None
+
+
+@pytest.mark.asyncio
+async def test_delete_pattern_failure_does_not_crash(temp_cache_dir, monkeypatch):
+    """delete_pattern 走 aiosqlite.connect 失败路径 → log warning + 返回 0, 不抛."""
+    cache = SQLiteCache(temp_cache_dir / "test.db")
+
+    def fake_connect(*args, **kwargs):
+        raise Exception("disk full")
+
+    monkeypatch.setattr("stock_mcp.cache.sqlite_cache.aiosqlite.connect", fake_connect)
+    # 不应抛
+    deleted = await cache.delete_pattern("quote:*")
+    assert deleted == 0

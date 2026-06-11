@@ -1,9 +1,13 @@
+import tempfile
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
 from stock_mcp.adapters.base import BaseAdapter
 from stock_mcp.adapters.registry import AdapterRegistry
+from stock_mcp.cache.sqlite_cache import SQLiteCache
+from stock_mcp.cache.ttl import TTLCalculator
 from stock_mcp.domain.models import NewsItem
 from stock_mcp.services.news_service import NewsService
 from stock_mcp.tools.news import register
@@ -31,11 +35,7 @@ class FakeAdapter(BaseAdapter):
 
 @pytest.mark.asyncio
 async def test_news_tool_returns_markdown():
-    import tempfile
-    from pathlib import Path
-
-    from stock_mcp.cache.sqlite_cache import SQLiteCache
-    from stock_mcp.cache.ttl import TTLCalculator
+    from fastmcp import FastMCP
 
     news = [
         NewsItem(
@@ -61,8 +61,6 @@ async def test_news_tool_returns_markdown():
         ttl_calc = TTLCalculator()
         svc = NewsService(registry, cache, ttl_calc)
 
-        from fastmcp import FastMCP
-
         mcp = FastMCP("test")
         register(mcp, svc)
 
@@ -71,3 +69,53 @@ async def test_news_tool_returns_markdown():
         assert "茅台公告" in text
         assert "白酒板块走强" in text
         assert "eastmoney" in text or "证券时报" in text
+
+
+class _ErrorAdapter(BaseAdapter):
+    """Raise DataSourceError on get_news."""
+
+    def __init__(self):
+        self.name = "fake-err"
+        self.priority = 1
+        self.enabled = True
+
+    async def get_realtime_quote(self, codes):
+        return []
+
+    async def get_kline(self, code, period, count):
+        return []
+
+    async def get_fundamental(self, code):
+        return None
+
+    async def get_news(self, code, limit):
+        from stock_mcp.domain.errors import DataSourceError
+
+        raise DataSourceError("api down", source="eastmoney")
+
+
+@pytest.mark.asyncio
+async def test_news_tool_handles_data_source_error():
+    """DataSourceError from adapter → ❌ error message returned."""
+    from fastmcp import FastMCP
+
+    adapter = _ErrorAdapter()
+    registry = AdapterRegistry([adapter])
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cache = SQLiteCache(Path(tmpdir) / "test.db")
+        ttl_calc = TTLCalculator()
+        svc = NewsService(registry, cache, ttl_calc)
+
+        mcp = FastMCP("test")
+        register(mcp, svc)
+
+        result = await mcp.call_tool("get_news", {"code": "600519", "limit": 10})
+        text = result.content[0].text
+        assert "❌" in text
+        assert "资讯获取失败" in text
+
+
+# Note: tool 的 `if not items:` 分支在当前 service/registry 架构下不可达:
+# - NewsService.get_news() 把 registry.fan_out 结果原样返回
+# - registry.fan_out 收到空列表视为"适配器失败", 全部失败抛 DataSourceError
+# - 因此空列表情况实际走 except DataSourceError 分支, tool 的 if not items 分支是死代码

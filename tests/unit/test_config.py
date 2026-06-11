@@ -32,6 +32,9 @@ def test_settings_iwencai_cookie_loaded(monkeypatch):
 
 
 def test_settings_cache_db_path_default(monkeypatch, temp_cache_dir):
+    monkeypatch.delenv("CACHE_DB_PATH", raising=False)
     monkeypatch.setenv("CACHE_DIR", str(temp_cache_dir))
     s = Settings(**NO_ENV)
+    assert s.cache_db_path is not None
     assert s.cache_db_path.name == "stock-mcp.db"
+    assert s.cache_db_path.parent == temp_cache_dir

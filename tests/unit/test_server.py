@@ -125,3 +125,20 @@ def test_create_server_passes_all_adapters_to_registry(mock_adapters):
 
     assert "adapters" in captured
     assert len(captured["adapters"]) == 5
+
+
+def test_main_runs_server_with_stdio_transport(mock_adapters):
+    """main() 应调用 mcp.run(transport="stdio") 启动 stdio 服务"""
+    import stock_mcp.server as server_module
+
+    # 抓取 create_server 返回的 mcp 实例上的 run 调用
+    captured: dict = {}
+
+    class _FakeMCP:
+        def run(self, transport: str) -> None:
+            captured["transport"] = transport
+
+    with patch.object(server_module, "create_server", return_value=_FakeMCP()):
+        server_module.main()
+
+    assert captured["transport"] == "stdio"

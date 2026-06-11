@@ -51,3 +51,32 @@ async def test_closes_after_success_in_half_open():
     # 立即过期, 下次 call 应是 HALF_OPEN
     await cb.call(lambda: "ok")  # 半开 + 成功 -> 关闭
     assert cb.state == CircuitState.CLOSED
+
+
+@pytest.mark.asyncio
+async def test_call_with_coroutine_func():
+    """call() 接收返回 coroutine 的 func → 走 await ret 分支"""
+    cb = CircuitBreaker(failure_threshold=3, recovery_timeout=1)
+
+    async def success():
+        return "async-ok"
+
+    result = await cb.call(success)
+    assert result == "async-ok"
+    assert cb.state == CircuitState.CLOSED
+
+
+@pytest.mark.asyncio
+async def test_call_records_failure_and_reraises():
+    """call() 内部抛异常 → record_failure + 重新 raise"""
+    cb = CircuitBreaker(failure_threshold=3, recovery_timeout=1)
+
+    async def fail():
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError, match="boom"):
+        await cb.call(fail)
+
+    # 失败应被记录
+    assert cb._failure_count == 1
+    assert cb.state == CircuitState.CLOSED

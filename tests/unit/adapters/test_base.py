@@ -71,3 +71,37 @@ async def test_query_stocks_default_raises():
 async def test_health_check_default_true():
     a = DummyAdapter()
     assert await a.health_check() is True
+
+
+class _BaseCallingAdapter(BaseAdapter):
+    """调用 super() 触发 BaseAdapter 抽象方法体的 NotImplementedError 抛点."""
+
+    name = "passthrough"
+    priority = 1
+    enabled = True
+
+    async def get_realtime_quote(self, codes):
+        return await BaseAdapter.get_realtime_quote(self, codes)
+
+    async def get_kline(self, code, period, count):
+        return await BaseAdapter.get_kline(self, code, period, count)
+
+    async def get_fundamental(self, code):
+        return await BaseAdapter.get_fundamental(self, code)
+
+    async def get_news(self, code, limit):
+        return await BaseAdapter.get_news(self, code, limit)
+
+
+@pytest.mark.asyncio
+async def test_base_adapter_abstract_methods_raise():
+    """子类的"薄包装"调用 super() 抽象方法时, 走 NotImplementedError 抛点."""
+    a = _BaseCallingAdapter()
+    with pytest.raises(NotImplementedError):
+        await a.get_realtime_quote(["600519"])
+    with pytest.raises(NotImplementedError):
+        await a.get_kline("600519", "1d", 10)
+    with pytest.raises(NotImplementedError):
+        await a.get_fundamental("600519")
+    with pytest.raises(NotImplementedError):
+        await a.get_news("600519", 10)

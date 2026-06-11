@@ -74,3 +74,47 @@ async def test_quote_tool_returns_list():
         assert "600519" in text
         assert "贵州茅台" in text
         assert "1500" in text
+
+
+class _ErrorAdapter(BaseAdapter):
+    """Raise DataSourceError on get_realtime_quote."""
+
+    def __init__(self):
+        self.name = "fake-err"
+        self.priority = 1
+        self.enabled = True
+
+    async def get_realtime_quote(self, codes):
+        from stock_mcp.domain.errors import DataSourceError
+
+        raise DataSourceError("timeout", source="tqcenter")
+
+    async def get_kline(self, code, period, count):
+        return []
+
+    async def get_fundamental(self, code):
+        return None
+
+    async def get_news(self, code, limit):
+        return []
+
+
+@pytest.mark.asyncio
+async def test_quote_tool_handles_data_source_error():
+    """DataSourceError from adapter → ❌ error message returned."""
+    from fastmcp import FastMCP
+
+    adapter = _ErrorAdapter()
+    registry = AdapterRegistry([adapter])
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cache = SQLiteCache(Path(tmpdir) / "test.db")
+        ttl_calc = TTLCalculator()
+        svc = QuoteService(registry, cache, ttl_calc)
+
+        mcp = FastMCP("test")
+        register(mcp, svc)
+
+        result = await mcp.call_tool("get_realtime_quote", {"codes": ["600519"]})
+        text = result.content[0].text
+        assert "❌" in text
+        assert "数据获取失败" in text
