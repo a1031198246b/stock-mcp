@@ -108,15 +108,22 @@ async def test_get_kline_normalizes_fields(fake_tqcenter, monkeypatch):
     a = TqcenterAdapter()
     a.initialize()
 
-    # 模拟 tqcenter 返回的 bar 列表
-    fake_tqcenter.tq.get_security_bars = MagicMock(return_value=[
-        {"datetime": 202606100000, "open": 100, "high": 105, "low": 99, "close": 103, "vol": 1000, "amount": 1e7},
-        {"datetime": 202606110000, "open": 103, "high": 108, "low": 102, "close": 107, "vol": 1500, "amount": 1.5e7},
-    ])
+    # 模拟 tqcenter.get_market_data 返回的 dict
+    # 字段: open/high/low/close/volume/amount/time 平行数组
+    fake_tqcenter.tq.get_market_data = MagicMock(return_value={
+        "open":  [100, 103],
+        "high":  [105, 108],
+        "low":   [99, 102],
+        "close": [103, 107],
+        "volume":[1000, 1500],
+        "amount":[1e7, 1.5e7],
+        "time":  ["20260610", "20260611"],
+    })
 
     klines = await a.get_kline("600519", "1d", 2)
     assert len(klines) == 2
     assert klines[0].open == 100
+    assert klines[0].close == 103
     assert klines[0].period == "1d"
     assert klines[0].source == "tqcenter"
 

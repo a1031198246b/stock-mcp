@@ -137,10 +137,17 @@ class TqcenterAdapter(BaseAdapter):
                 raise DataSourceError(str(e), source=self.name)
         return results
 
-    # 周期映射: tqcenter 协议 → 分钟数
+    # 周期映射: 我们的 period → tqcenter 合法 period
     _PERIOD_MAP = {
-        "1m": 1, "5m": 5, "15m": 15, "30m": 30, "60m": 60,
-        "1h": 60, "1d": 0, "1w": -1, "1M": -2,
+        "1m": "1m",
+        "5m": "5m",
+        "10m": "10m",
+        "15m": "15m",
+        "30m": "30m",
+        "1h": "1h",
+        "1d": "1d",
+        "1w": "1w",
+        "1M": "1mon",  # 月线
     }
 
     async def get_kline(self, code: str, period: str, count: int) -> List[Kline]:
@@ -150,38 +157,57 @@ class TqcenterAdapter(BaseAdapter):
             raise DataSourceError(f"不支持的 period: {period}", source=self.name)
 
         try:
-            category = self._PERIOD_MAP[period]
+            tq_period = self._PERIOD_MAP[period]
             tq_code = self._to_tq_code(code)
-            # get_security_bars 返回 numpy 结构
-            result = self._tq.get_security_bars(category, 0, tq_code, 0, count)
-            if result is None or len(result) == 0:
+            # get_market_data 返回 dict: {'open': [...], 'high': [...], 'low': [...], ...}
+            data = self._tq.get_market_data(
+                stock_list=[tq_code],
+                period=tq_period,
+                count=count,
+                dividend_type='front',  # 前复权
+                fill_data=True,
+            )
+            if not data or "error" in data:
                 return []
-            # result 字段: datetime, open, high, low, close, amount, volume
+            # 解析 dict 成 List[Kline]
+            opens = data.get("open", [])
+            highs = data.get("high", [])
+            lows = data.get("low", [])
+            closes = data.get("close", [])
+            volumes = data.get("volume", [])
+            amounts = data.get("amount", [])
+            times = data.get("time", []) or data.get("datetime", [])
+
+            n = min(len(opens), len(highs), len(lows), len(closes))
             klines = []
-            for bar in result:
-                # datetime 可能是 int (yyyyMMddHHmm) 或 pandas Timestamp
-                dt = bar['datetime']
-                if isinstance(dt, (int, float)) and dt > 1e10:
-                    # yyyyMMddHHmm 格式
-                    import datetime as _dt
-                    year = int(dt // 100000000)
-                    month = int((dt // 1000000) % 100)
-                    day = int((dt // 10000) % 100)
-                    hour = int((dt // 100) % 100)
-                    minute = int(dt % 100)
-                    dt_obj = _dt.datetime(year, month, day, hour, minute)
-                else:
-                    dt_obj = pd.Timestamp(dt).to_pydatetime()
+            import datetime as _dt
+            for i in range(n):
+                # time 字段是 'YYYYMMDD' 或 'YYYYMMDDHHMM' 字符串
+                t_str = str(times[i]) if i < len(times) else ""
+                try:
+                    if len(t_str) >= 14:
+                        dt_obj = _dt.datetime(
+                            int(t_str[0:4]), int(t_str[4:6]), int(t_str[6:8]),
+                            int(t_str[8:10]) if len(t_str) >= 10 else 0,
+                            int(t_str[10:12]) if len(t_str) >= 12 else 0,
+                        )
+                    elif len(t_str) >= 8:
+                        dt_obj = _dt.datetime(int(t_str[0:4]), int(t_str[4:6]), int(t_str[6:8]))
+                    else:
+                        dt_obj = pd.Timestamp.now().to_pydatetime()
+                except Exception:
+                    dt_obj = pd.Timestamp.now().to_pydatetime()
+
                 klines.append(Kline(
                     code=code.split(".")[0],
                     period=period,
                     datetime=dt_obj,
-                    open=float(bar['open']),
-                    high=float(bar['high']),
-                    low=float(bar['low']),
-                    close=float(bar['close']),
-                    volume=int(bar['vol']),
-                    amount=float(bar['amount']),
+                    open=float(opens[i]),
+                    high=float(highs[i]),
+                    low=float(lows[i]),
+                    close=float(closes[i]),
+                    volume=int(float(volumes[i])) if i < len(volumes) else 0,
+                    amount=float(amounts[i]) if i < len(amounts) else 0.0,
                     source=self.name,
                 ))
             return klines
