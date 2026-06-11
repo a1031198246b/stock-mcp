@@ -10,6 +10,7 @@ dependencies = [
     "structlog>=24.1",
     "pandas>=2.1",
     "aiosqlite>=0.19",
+    "akshare>=1.12",
     "httpx>=0.26",
     "beautifulsoup4>=4.12",
 ]
