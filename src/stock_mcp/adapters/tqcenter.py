@@ -118,8 +118,10 @@ class TqcenterAdapter(BaseAdapter):
             tq_code = self._to_tq_code(code)
             try:
                 snap = self._tq.get_market_snapshot(tq_code)
+                # 非交易时段 / 通达信刚启动数据未就绪: snapshot 返回但 Now=0
+                # 不抛错, 而是跳过这只股票 (让 registry fallback 到下个源)
                 if not snap or float(snap.get("Now", 0)) <= 0:
-                    raise NotFoundError(f"无法获取 {code} 行情")
+                    continue  # 优雅降级, 不抛 NotFoundError
                 info = self._stock_info_cache.get(code) or self._safe_stock_info(tq_code)
                 now = float(snap.get("Now", 0))
                 last_close = float(snap.get("LastClose", 0))

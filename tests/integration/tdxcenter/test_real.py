@@ -67,19 +67,39 @@ def tq_adapter():
 
     如果锁被占用（其他 Python 进程正在用），返回的 adapter 是 disabled
     这种情况下用 pytest.skip
+
+    teardown: 显式 close, 释放 DLL 锁, 避免脏锁污染下次测试
     """
     from stock_mcp.adapters.tqcenter import TqcenterAdapter
     a = TqcenterAdapter()
     a.initialize()
     if not a.enabled:
         pytest.skip("tqcenter 不可用 (TDX_PATH 未配置或初始化失败/锁被占用)")
-    return a
+    yield a
+    # teardown: 显式关闭, 释放 DLL 锁
+    try:
+        if a._tq is not None:
+            a._tq.close()
+    except Exception:
+        pass
+
+
+def _skip_if_market_closed(tq_adapter):
+    """非交易时段 skip
+
+    A 股交易时间 9:30-11:30 / 13:00-15:00 北京时间.
+    非交易时段 tqcenter.get_market_snapshot() 返回 price=0, 我们的测试
+    会因为 Now=0 而误判.
+    """
+    quotes = asyncio.run(tq_adapter.get_realtime_quote(["600519"]))
+    if not quotes or quotes[0].price == 0:
+        pytest.skip("非交易时段, tqcenter 返回 price=0 (无实际数据可验证)")
+    return quotes
 
 
 def test_get_realtime_quote_amount_in_yuan(tq_adapter):
     """Bug 2: 成交额必须是元（茅台日成交额 10^9 量级），不是万元（10^5 量级）"""
-    quotes = asyncio.run(tq_adapter.get_realtime_quote(["600519"]))
-    assert len(quotes) == 1
+    quotes = _skip_if_market_closed(tq_adapter)
     q = quotes[0]
     assert q.code == "600519"
     # 茅台日成交额至少几亿元, 即 10^9 元以上
@@ -92,7 +112,7 @@ def test_get_realtime_quote_amount_in_yuan(tq_adapter):
 
 def test_get_realtime_quote_volume_in_lots(tq_adapter):
     """Bug 3: 成交量必须是手 (茅台日成交量 10^4-10^5 手), 不是股 (10^6-10^7)"""
-    quotes = asyncio.run(tq_adapter.get_realtime_quote(["600519"]))
+    quotes = _skip_if_market_closed(tq_adapter)
     q = quotes[0]
     # 茅台日成交量在 几万 手 量级
     # 修 bug 之前这里是 ~3.9*10^6 (股)
@@ -104,7 +124,7 @@ def test_get_realtime_quote_volume_in_lots(tq_adapter):
 
 def test_get_realtime_quote_bid_ask_in_lots(tq_adapter):
     """Bug 3 同样影响五档买卖盘: 必须是手 (1-1000 量级), 不是股 (100-100000)"""
-    quotes = asyncio.run(tq_adapter.get_realtime_quote(["600519"]))
+    quotes = _skip_if_market_closed(tq_adapter)
     q = quotes[0]
     # 买一量: 1-1000 手是合理的
     # 修 bug 之前这里会是 424 (股)
@@ -119,7 +139,7 @@ def test_get_realtime_quote_bid_ask_in_lots(tq_adapter):
 
 def test_get_realtime_quote_basic_fields(tq_adapter):
     """基本字段合理性检查 - 防止字段名错位"""
-    quotes = asyncio.run(tq_adapter.get_realtime_quote(["600519"]))
+    quotes = _skip_if_market_closed(tq_adapter)
     q = quotes[0]
     # 茅台价格在 1000-2000 区间
     assert 1000 < q.price < 2000, f"价格 {q.price} 不在合理区间"

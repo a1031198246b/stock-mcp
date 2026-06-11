@@ -40,6 +40,15 @@ async def test_sina_realtime_quote_returns_valid_data(sina_adapter):
     assert len(quotes) == 1
     q = quotes[0]
     assert q.code == "600519"
+
+    # 非交易时段: sina 返回 last_close 正确, 但当前价 = 0
+    # A 股: 9:30-11:30 / 13:00-15:00 北京时间
+    if q.price == 0 and q.last_close > 0:
+        pytest.skip(
+            f"非交易时段, sina 返回 price=0 (但 last_close={q.last_close} 正确, "
+            f"说明数据流 OK, 只是市场未开)"
+        )
+
     # 价格合理
     assert 1000 < q.price < 2000, f"茅台价格 {q.price} 异常"
     # amount 应该是元 (sina 直接给元)
