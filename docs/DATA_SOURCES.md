@@ -5,10 +5,12 @@
 | 适配器 | 优先级 | 覆盖 | 强制？ | 外部依赖 |
 |---|---|---|---|---|
 | tqcenter | 1 | 实时行情、K线、5档 | 软强制 | 通达信客户端 |
+| baostock | 2 | 财务三表、K线 | 软强制 | baostock 包 |
 | sina | 2 | 实时行情 | 软强制 | 无 |
 | akshare | 3 | 基本面、K线、资讯 | 软强制 | akshare 包 |
 | eastmoney | 4 | 资讯、公告 | 可选 | 无 |
 | iwencai | 0 | 自然语言选股、回测 | 可选 | Node.js; cookie 可选 |
+| yfinance | 5 | 港股、美股 | 可选 | yfinance 包 (国内需 HTTP_PROXY) |
 
 ## 通达信 tqcenter
 
@@ -57,3 +59,22 @@
 - **合规风险**: **高** (商业化前需法务评估)
 - **依赖**: Node.js 16+, pywencai
 - **Cookie**: 可选. 未配置时 pywencai 以匿名模式运行, 部分查询可能受限或返回字段较少, 但常规选股 (如 ``今日涨停``、``市值<100亿``) 仍可使用. 配置 cookie 可获得更完整的数据.
+
+## 证券宝 baostock
+
+- **URL**: baostock.com
+- **覆盖**: A 股 K线 (深历史) + 财务三表 (利润表/资产负债表/现金流量表)
+- **稳定性**: 高 (国内官方)
+- **数据准**: baostock 比 akshare 数据准, 适合回溯
+- **依赖**: baostock Python 包
+- **不提供**: 实时行情, 资讯
+
+## 雅虎财经 yfinance
+
+- **URL**: finance.yahoo.com
+- **覆盖**: 港股 (0700.HK), 美股 (AAPL), 期货, 外汇
+- **稳定性**: 中 (15min 延迟, 国内访问可能被墙)
+- **合规风险**: 低 (公开数据)
+- **依赖**: yfinance Python 包
+- **HTTP_PROXY**: 国内访问建议设, 例 `HTTP_PROXY=http://127.0.0.1:7890`
+- **不提供**: A 股, 资讯

@@ -56,10 +56,22 @@ class MyAdapter(BaseAdapter):
 ## 添加新数据源 / 扩展适配器能力
 
 1. 继承 `BaseAdapter` (位于 `src/stock_mcp/adapters/base.py`)
-2. 实现 4 个核心方法: `get_realtime_quote`, `get_kline`, `get_fundamental`, `get_news`
-3. 在 `src/stock_mcp/server.py` 的 `create_server()` 中注册
-4. 添加单元测试 (用 `respx` mock HTTP, 或 `unittest.mock` mock 模块)
-5. 如果是真实数据源, 加集成测试 (用 `TDX_PATH` 跳过机制)
+2. **设置类属性** `name`, `priority`, `supported_markets: list[str]`
+3. 实现 5 个核心方法: `get_realtime_quote`, `get_kline`, `get_fundamental`, `get_news`, `get_query_stocks` — **每个都接 `market: str = "a_stock"` 参数**
+4. 在 `src/stock_mcp/server.py` 的 `create_server()` 中注册
+5. 添加单元测试 (用 `respx` mock HTTP, 或 `unittest.mock` mock 模块)
+
+### 当前 7 个适配器
+
+| 适配器 | priority | supported_markets | 覆盖 |
+|---|---|---|---|
+| tqcenter | 1 | a_stock | 行情 + K线 + 基本面 |
+| baostock | 2 | a_stock | K线 + 财务三表 |
+| sina | 2 | a_stock | 行情 |
+| akshare | 3 | a_stock | 行情 + K线 + 基本面 + 资讯 |
+| eastmoney | 4 | a_stock | 资讯 |
+| iwencai | 0 | a_stock | 自然语言选股 |
+| yfinance | 5 | hk, us | 港美股行情 + K线 + 基本面 |
 
 ### tqcenter 适配器要点
 

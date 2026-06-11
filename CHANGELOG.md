@@ -22,6 +22,21 @@
 - 10 个 tdxcenter 集成测试全过 (需 TDX 重启后)
 - TDX 端运行时验证: 茅台 PE 14.64 / PB 5.9 / ROE 10.06% / 市值 15957.29 亿
 
+## 2026-06-12
+
+### 新增
+- **baostock 适配器** (`baostock_source.py`): A 股 K线 (深度历史) + 财务三表 (income/balance/cashflow)
+- **yfinance 适配器** (`yfinance_source.py`): 港股 (00700.HK) + 美股 (AAPL) 行情/K线/基本面
+- **多市场支持**: 5 个现有工具加 `market` 参数 ("a_stock" / "hk" / "us"), 默认 "a_stock" (向后兼容)
+- **get_financial_statement 工具**: 暴露 baostock 财务三表
+- **Market Literal type** + 所有 4 个 domain model 加 `market` 字段
+- **新依赖**: `baostock>=0.8.9` + `yfinance>=0.2.40`
+
+### 改动
+- BaseAdapter 加 `supported_markets: list[str]` 字段 (默认 ["a_stock"])
+- AdapterRegistry 加 `fan_out_in_sublist` 方法 (按 market 子集 fallback)
+- 4 个 service 加 market 路由, service→adapter 也透传 market=market
+
 ## 2026-06-10 之前
 
 - P0-P4 阶段完成
