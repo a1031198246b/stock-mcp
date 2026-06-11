@@ -29,9 +29,11 @@ uv run stock-mcp
 ## 添加新数据源
 
 1. 继承 `BaseAdapter` (位于 `src/stock_mcp/adapters/base.py`)
-2. 实现 5 个核心方法: `get_realtime_quote`, `get_kline`, `get_fundamental`, `get_news`, `query_stocks`
-3. 在 `src/stock_mcp/server.py` 的 `create_server()` 中注册
-4. 添加单元测试 (用 `respx` mock HTTP, 或 `unittest.mock` mock 模块)
+2. **设置类属性** `name`, `priority`, `supported_markets: list[str]` (默认 ["a_stock"])
+3. 实现 5 个核心方法: `get_realtime_quote`, `get_kline`, `get_fundamental`, `get_news`, `query_stocks` — **每个都接 `market: str = "a_stock"` 参数**
+4. (可选) 实现 `get_financial_statement` 方法暴露**财务三表** (目前仅 baostock 实现, 给 A 股用)
+5. 在 `src/stock_mcp/server.py` 的 `create_server()` 中注册
+6. 添加单元测试 (用 `respx` mock HTTP, 或 `unittest.mock` mock 模块)
 
 示例:
 ```python
