@@ -250,8 +250,87 @@ class TqcenterAdapter(BaseAdapter):
             raise DataSourceError(str(e), source=self.name)
 
     async def get_fundamental(self, code: str) -> Optional[Fundamental]:
-        """P1 阶段先返回 None"""
-        return None
+        """从 tqcenter.get_stock_info + 实时价 拼出基本面
+
+        tqcenter 本身不直接提供 PE/PB, 但提供:
+        - J_zgb (总股本, 万股), J_mgsy (每股收益, 元), J_mgjzc (每股净资产, 元)
+        - J_jzc (净资产), J_zzc (总资产), J_jly (净利润)
+        - J_hy (行业代码)
+        配合实时价, 我们自己算 PE / PB / 市值
+        """
+        if not self._initialized:
+            raise DataSourceError("tqcenter 未初始化", source=self.name)
+        tq_code = self._to_tq_code(code)
+        try:
+            info = self._tq.get_stock_info(tq_code)
+        except Exception:
+            # tqcenter 对不存在/格式不对的代码会抛 "股票代码格式错误" 异常
+            # (Bug 1 修复后 _to_tq_code 已补后缀, 但 DLL 内部仍校验代码在股票列表中)
+            # 上层 (get_realtime_quote) 用 NotFoundError 表示, 这里直接 None
+            return None
+
+        if not info or info.get("ErrorId") != "0":
+            return None
+
+        # tqcenter 字段名是大写; 全部可能是字符串, 用 _f 安全转 float
+        def _f(d, key, default=0.0):
+            v = d.get(key, default)
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return default
+
+        # 拿实时价算 PE/PB
+        try:
+            snap = self._tq.get_market_snapshot(tq_code)
+            price = float(snap.get("Now", 0)) if snap else 0.0
+        except Exception:
+            price = 0.0
+
+        # 单位换算:
+        # - J_zgb 是"万股", 我们的 model 要"亿股", 所以 / 10000
+        # - 我们的 model 市值单位"亿元", = price * 总股本(股) / 1e8
+        #   = price * J_zgb(万股) * 10000 / 1e8
+        #   = price * J_zgb / 10000
+        total_shares_wan = _f(info, "J_zgb")           # 万股
+        total_shares_yi = total_shares_wan / 10000.0    # 亿股 (model 字段)
+        market_cap = price * total_shares_wan / 10000.0  # 亿元 (model 字段)
+        # 注意: 万 * 元 / 10000 = 亿元, 这里写 price * J_zgb / 10000
+
+        eps = _f(info, "J_mgsy")              # 元/股
+        bps = _f(info, "J_mgjzc")             # 元/股
+        pe = price / eps if eps > 0 else 0.0  # 用最新季报 EPS 算 (注: 不是 TTM)
+        pb = price / bps if bps > 0 else 0.0
+
+        # ROE 近似: 净利润 / 净资产
+        jly = _f(info, "J_jly")    # 净利润, 元
+        jzc = _f(info, "J_jzc")    # 净资产, 元
+        roe = (jly / jzc) if jzc > 0 else 0.0
+
+        # 行业代码: tqcenter 给的是 TDX 内部数字, 名称映射是 TDX 私有表
+        # 为避免错映射, 这里只回传原始代码 (字符串), 上层可查公开 TDX 行业表
+        hy_code = info.get("J_hy", 0)
+        try:
+            industry = str(int(hy_code))
+        except (TypeError, ValueError):
+            industry = None
+
+        return Fundamental(
+            code=code.split(".")[0],
+            name=info.get("Name", ""),
+            pe=round(pe, 2) if pe > 0 else None,
+            pb=round(pb, 2) if pb > 0 else None,
+            roe=round(roe, 4) if roe > 0 else None,   # ROE 是小数 (0.15 = 15%)
+            total_shares=round(total_shares_yi, 4) if total_shares_yi > 0 else None,
+            market_cap=round(market_cap, 2) if market_cap > 0 else None,
+            industry=industry,
+            source=self.name,
+        )
+
+    # 注意: industry 字段当前是 TDX 内部行业代码 (字符串数字).
+    # 完整的 TDX 行业代码 → 中文名 映射表是 TDX 私有数据 (~100+ 项),
+    # 硬编码容易错 (我之前编的 45 个有近一半错). 上层 (UI / iwencai / akshare) 拿到后
+    # 可查公开的证监会行业分类做转换. 这里只保证 raw code 正确.
 
     async def get_news(self, code: str, limit: int) -> List[NewsItem]:
         """P1 阶段先返回空"""

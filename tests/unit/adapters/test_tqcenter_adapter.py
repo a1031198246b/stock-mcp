@@ -98,6 +98,141 @@ async def test_health_check_failure_returns_false(fake_tqcenter, monkeypatch):
     assert result is False
 
 
+# ============== get_fundamental 测试 ==============
+
+def _make_stock_info(
+    j_zgb: str = "125008.16",     # 万股
+    j_mgsy: str = "87.17",         # 元/股
+    j_mgjzc: str = "216.32",       # 元/股
+    j_jzc: str = "27089404.00",    # 元
+    j_jly: str = "2724251.25",     # 元
+    j_hy=37,                       # 行业代码
+    name="贵州茅台",
+    error_id="0",
+):
+    """构造一个 tqcenter.get_stock_info 风格的字典 (字段可能为字符串)"""
+    return {
+        "ErrorId": error_id,
+        "Name": name,
+        "J_zgb": j_zgb,
+        "J_mgsy": j_mgsy,
+        "J_mgjzc": j_mgjzc,
+        "J_jzc": j_jzc,
+        "J_jly": j_jly,
+        "J_hy": j_hy,
+    }
+
+
+@pytest.mark.asyncio
+async def test_get_fundamental_computes_pe_pb_marketcap(fake_tqcenter, monkeypatch):
+    """get_fundamental: 用 stock_info + 实时价计算 PE/PB/市值"""
+    monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
+    a = TqcenterAdapter()
+    a.initialize()
+
+    # 茅台: 1276.5 元 × 12.5008 亿股 = 15957.3 亿
+    # PE = 1276.5 / 87.17 ≈ 14.64
+    # PB = 1276.5 / 216.32 ≈ 5.90
+    fake_tqcenter.tq.get_stock_info = MagicMock(return_value=_make_stock_info())
+    fake_tqcenter.tq.get_market_snapshot = MagicMock(return_value={"Now": 1276.5})
+
+    f = await a.get_fundamental("600519")
+    assert f is not None
+    assert f.code == "600519"
+    assert f.name == "贵州茅台"
+    assert f.pe == pytest.approx(14.64, rel=0.01)
+    assert f.pb == pytest.approx(5.90, rel=0.01)
+    # ROE = J_jly / J_jzc = 2724251.25 / 27089404.00 ≈ 0.1006
+    assert f.roe == pytest.approx(0.1006, rel=0.01)
+    # 总股本: 125008.16 万股 = 12.5008 亿股
+    assert f.total_shares == pytest.approx(12.5008, rel=0.01)
+    # 市值: 1276.5 * 125008.16 / 10000 = 15957.28 亿
+    assert f.market_cap == pytest.approx(15957.28, rel=0.01)
+    # 行业代码: 37 → "37" (原始 TDX 内部代码, 不强行猜名称)
+    assert f.industry == "37"
+    assert f.source == "tqcenter"
+
+
+@pytest.mark.asyncio
+async def test_get_fundamental_returns_none_on_error_response(fake_tqcenter, monkeypatch):
+    """ErrorId != '0' → 返回 None (不抛)"""
+    monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
+    a = TqcenterAdapter()
+    a.initialize()
+
+    fake_tqcenter.tq.get_stock_info = MagicMock(return_value={"ErrorId": "11", "Error": "no such code"})
+    f = await a.get_fundamental("600519")
+    assert f is None
+
+
+@pytest.mark.asyncio
+async def test_get_fundamental_handles_string_numbers(fake_tqcenter, monkeypatch):
+    """tqcenter 的 J_zgb/J_mgsy 等字段实际是字符串, 必须能转 float"""
+    monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
+    a = TqcenterAdapter()
+    a.initialize()
+
+    fake_tqcenter.tq.get_stock_info = MagicMock(return_value=_make_stock_info(
+        j_zgb="100000.00", j_mgsy="10.0", j_mgjzc="20.0",
+        j_jzc="200000.00", j_jly="10000.00",
+    ))
+    fake_tqcenter.tq.get_market_snapshot = MagicMock(return_value={"Now": 100.0})
+
+    f = await a.get_fundamental("000001")
+    assert f is not None
+    assert f.pe == 10.0    # 100 / 10
+    assert f.pb == 5.0     # 100 / 20
+    assert f.roe == 0.05   # 10000 / 200000
+    assert f.total_shares == 10.0   # 100000 万股 = 10 亿股
+    assert f.market_cap == 1000.0   # 100 * 100000 / 10000
+
+
+@pytest.mark.asyncio
+async def test_get_fundamental_handles_zero_eps(fake_tqcenter, monkeypatch):
+    """EPS=0 (新股/亏损股) 时 PE 应为 None 不应除零"""
+    monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
+    a = TqcenterAdapter()
+    a.initialize()
+
+    fake_tqcenter.tq.get_stock_info = MagicMock(return_value=_make_stock_info(
+        j_mgsy="0.0", j_mgjzc="5.0",
+    ))
+    fake_tqcenter.tq.get_market_snapshot = MagicMock(return_value={"Now": 50.0})
+
+    f = await a.get_fundamental("688999")
+    assert f is not None
+    assert f.pe is None  # 0 EPS → 不算 PE
+    assert f.pb == 10.0  # 50 / 5
+
+
+@pytest.mark.asyncio
+async def test_get_fundamental_industry_code_is_string(fake_tqcenter, monkeypatch):
+    """industry 字段保留 TDX 原始代码, 上层做翻译"""
+    monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
+    a = TqcenterAdapter()
+    a.initialize()
+
+    fake_tqcenter.tq.get_stock_info = MagicMock(return_value=_make_stock_info(j_hy=37))
+    fake_tqcenter.tq.get_market_snapshot = MagicMock(return_value={"Now": 100.0})
+
+    f = await a.get_fundamental("600519")
+    assert f.industry == "37"  # 不是"白酒" — 我们不强行猜名称
+
+
+@pytest.mark.asyncio
+async def test_get_fundamental_returns_none_when_dll_raises(fake_tqcenter, monkeypatch):
+    """不存在的代码 → tqcenter 抛异常 → 返回 None (不抛)"""
+    monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
+    a = TqcenterAdapter()
+    a.initialize()
+
+    fake_tqcenter.tq.get_stock_info = MagicMock(
+        side_effect=Exception("股票代码格式错误: 999999")
+    )
+    f = await a.get_fundamental("999999")
+    assert f is None
+
+
 class FakeTqKlineModule(FakeTqModule):
     pass
 

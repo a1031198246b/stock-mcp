@@ -69,19 +69,39 @@ def tq_adapter():
     这种情况下用 pytest.skip
 
     teardown: 显式 close, 释放 DLL 锁, 避免脏锁污染下次测试
+
+    启动时: 给 DLL 一点时间让之前的锁自然释放 (DLL 端 close 是异步的)
     """
+    import time as _time
     from stock_mcp.adapters.tqcenter import TqcenterAdapter
-    a = TqcenterAdapter()
-    a.initialize()
-    if not a.enabled:
-        pytest.skip("tqcenter 不可用 (TDX_PATH 未配置或初始化失败/锁被占用)")
-    yield a
-    # teardown: 显式关闭, 释放 DLL 锁
-    try:
-        if a._tq is not None:
-            a._tq.close()
-    except Exception:
-        pass
+
+    # 重试: 给 DLL 一些时间释放锁
+    last_err = None
+    for attempt in range(3):
+        a = TqcenterAdapter()
+        a.initialize()
+        if a.enabled:
+            yield a
+            # teardown: 显式关闭, 释放 DLL 锁
+            try:
+                if a._tq is not None:
+                    a._tq.close()
+                    _time.sleep(0.2)  # 给 DLL 一点时间
+            except Exception:
+                pass
+            return
+        last_err = a._tq
+        # 失败, 等待再试
+        _time.sleep(1.0)
+        # 强制清除 Python 端标志
+        try:
+            a._tq._initialized = False
+            a._tq.run_id = -1
+        except Exception:
+            pass
+
+    # 3 次都失败
+    pytest.skip(f"tqcenter 不可用 (3 次重试后仍失败, 最后一次: {last_err})")
 
 
 def _skip_if_market_closed(tq_adapter):
@@ -167,6 +187,34 @@ def test_get_realtime_quote_invalid_code_format(tq_adapter):
     assert "代码格式" not in msg and "format" not in msg.lower(), (
         f"碰到 '代码格式' 错误, 说明 _to_tq_code 没生效: {msg}"
     )
+
+
+# ============== 基本面 ==============
+
+def test_get_fundamental_maotai(tq_adapter):
+    """茅台: 总股本 12.5 亿股左右, PE 应在 5~30 区间"""
+    import asyncio
+    f = asyncio.run(tq_adapter.get_fundamental("600519"))
+    assert f is not None
+    assert f.code == "600519"
+    assert f.name == "贵州茅台"
+    # 总股本约 12.5 亿股 (J_zgb = 125008.16 万股)
+    assert 10 < f.total_shares < 15, f"总股本 {f.total_shares} 亿股异常"
+    # 市值应在万亿级 (1.5 万亿 ~ 2 万亿)
+    assert 5000 < f.market_cap < 30000, f"市值 {f.market_cap} 亿元异常"
+    # PE/PB 应该为正
+    assert f.pe is not None and 0 < f.pe < 100
+    assert f.pb is not None and 0 < f.pb < 50
+    # 行业代码 (字符串) 应存在
+    assert f.industry is not None and f.industry.isdigit()
+    assert f.source == "tqcenter"
+
+
+def test_get_fundamental_returns_none_for_nonexistent_code(tq_adapter):
+    """Bug 1 反向验证: 不存在代码返回 None (不是抛异常)"""
+    import asyncio
+    f = asyncio.run(tq_adapter.get_fundamental("999999"))
+    assert f is None
 
 
 # ============== K 线 (注意: K 线 API 名字在 tqcenter 不同版本有差异, 暂不固化测试) ==============
