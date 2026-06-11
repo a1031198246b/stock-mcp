@@ -1,9 +1,12 @@
 """领域模型 - 所有 adapter 必须输出这些标准化结构"""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
+
+Market = Literal["a_stock", "hk", "us"]
 
 
 class Quote(BaseModel):
@@ -21,6 +24,7 @@ class Quote(BaseModel):
     ask_5: list[int]  # 卖一到卖五量
     timestamp: datetime
     source: str = "unknown"
+    market: Market = "a_stock"
 
 
 class Kline(BaseModel):
@@ -34,6 +38,7 @@ class Kline(BaseModel):
     volume: int
     amount: float
     source: str = "unknown"
+    market: Market = "a_stock"
 
 
 class Fundamental(BaseModel):
@@ -46,6 +51,7 @@ class Fundamental(BaseModel):
     market_cap: float | None = None  # 总市值（亿元）
     industry: str | None = None
     source: str = "unknown"
+    market: Market = "a_stock"
 
 
 class NewsItem(BaseModel):
@@ -55,6 +61,7 @@ class NewsItem(BaseModel):
     publish_time: datetime
     source: str  # 资讯来源
     summary: str | None = None
+    market: Market = "a_stock"
 
 
 class StockQueryResult(BaseModel):
@@ -63,3 +70,15 @@ class StockQueryResult(BaseModel):
     code: str
     name: str
     matched_fields: dict[str, Any] = Field(default_factory=dict)
+
+
+class FinancialStatement(BaseModel):
+    """baostock 财务三表"""
+    code: str
+    name: str
+    market: Market
+    period: str  # baostock 原始标识, e.g. "2024-1"
+    statement_type: str  # "income" / "balance" / "cashflow"
+    data: dict[str, Any] = Field(default_factory=dict)  # 原始字段
+    source: str = "baostock"
+    fetched_at: datetime
