@@ -400,20 +400,23 @@ def test_initialize_returns_early_when_already_initialized(fake_tqcenter, monkey
 
 
 def test_initialize_returns_early_when_tdx_path_unset(monkeypatch):
-    """TDX_PATH 为空 → initialize 直接 return, 保持 disabled"""
-    monkeypatch.delenv("TDX_PATH", raising=False)
-    # 显式清掉 settings 单例, 避免其他测试污染
-    from stock_mcp.config import reset_settings
+    """TDX_PATH 为空 → initialize 直接 return, 保持 disabled
 
-    reset_settings()
-    try:
-        a = TqcenterAdapter()
-        a.initialize()
-        assert a._initialized is False
-        assert a.enabled is False
-    finally:
-        # 还原, 避免影响后续测试
-        reset_settings()
+    不用 monkeypatch.delenv("TDX_PATH"), 因为 .env 文件可能含 TDX_PATH,
+    那样 get_settings() 仍会读到. 改用 monkeypatch.setattr 直接 mock Settings
+    对象返回 tdx_path=""
+    """
+    from unittest.mock import MagicMock
+    from stock_mcp.adapters import tqcenter as tqcenter_mod
+
+    fake_settings = MagicMock()
+    fake_settings.tdx_path = ""  # 强制空, 模拟 CI 环境
+    monkeypatch.setattr(tqcenter_mod, "get_settings", lambda: fake_settings)
+
+    a = TqcenterAdapter()
+    a.initialize()
+    assert a._initialized is False
+    assert a.enabled is False
 
 
 def test_to_tq_code_keeps_existing_dot_suffix():
