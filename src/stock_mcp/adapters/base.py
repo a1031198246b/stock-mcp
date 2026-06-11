@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from functools import wraps
+from typing import List
 
 from ..domain.models import Fundamental, Kline, NewsItem, Quote, StockQueryResult
 
@@ -12,6 +13,7 @@ class BaseAdapter(ABC):
     name: str = "abstract"
     priority: int = 100  # 数字越小越优先
     enabled: bool = True
+    supported_markets: List[str] = ["a_stock"]  # 默认仅 A 股
 
     async def health_check(self) -> bool:
         """默认实现：始终健康。子类可重写做真实检查。"""
