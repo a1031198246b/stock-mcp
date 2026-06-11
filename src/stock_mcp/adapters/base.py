@@ -51,8 +51,8 @@ class BaseAdapter(ABC):
             _original = cls.get_realtime_quote
 
             @wraps(_original)
-            async def wrapped_get_realtime_quote(self, codes, _orig=_original):
-                quotes = await _orig(self, codes)
+            async def wrapped_get_realtime_quote(self, codes, *args, _orig=_original, **kw):
+                quotes = await _orig(self, codes, *args, **kw)
                 for q in quotes:
                     q.source = self.name
                 return quotes
@@ -63,8 +63,8 @@ class BaseAdapter(ABC):
             _original = cls.get_kline
 
             @wraps(_original)
-            async def wrapped_get_kline(self, code, period, count, _orig=_original):
-                klines = await _orig(self, code, period, count)
+            async def wrapped_get_kline(self, code, period, count, *args, _orig=_original, **kw):
+                klines = await _orig(self, code, period, count, *args, **kw)
                 for k in klines:
                     k.source = self.name
                 return klines
@@ -75,8 +75,8 @@ class BaseAdapter(ABC):
             _original = cls.get_fundamental
 
             @wraps(_original)
-            async def wrapped_get_fundamental(self, code, _orig=_original):
-                fund = await _orig(self, code)
+            async def wrapped_get_fundamental(self, code, *args, _orig=_original, **kw):
+                fund = await _orig(self, code, *args, **kw)
                 if fund is not None:
                     fund.source = self.name
                 return fund
