@@ -75,18 +75,14 @@ async def test_financial_statement_tool_handles_disabled_adapter():
     mcp = FastMCP("test")
     register(mcp, None)
 
-    result = await mcp.call_tool(
-        "get_financial_statement", {"code": "600519"}
-    )
+    result = await mcp.call_tool("get_financial_statement", {"code": "600519"})
     text = result.content[0].text
     assert "❌" in text
     assert "baostock" in text
 
     mcp2 = FastMCP("test")
     register(mcp2, _FakeBaostock(enabled=False))
-    result2 = await mcp2.call_tool(
-        "get_financial_statement", {"code": "600519"}
-    )
+    result2 = await mcp2.call_tool("get_financial_statement", {"code": "600519"})
     text2 = result2.content[0].text
     assert "❌" in text2
 
@@ -113,9 +109,7 @@ async def test_financial_statement_tool_handles_data_source_error():
     mcp = FastMCP("test")
     register(mcp, adapter)
 
-    result = await mcp.call_tool(
-        "get_financial_statement", {"code": "600519"}
-    )
+    result = await mcp.call_tool("get_financial_statement", {"code": "600519"})
     text = result.content[0].text
     assert "❌" in text
     assert "baostock 失败" in text
@@ -129,9 +123,7 @@ async def test_financial_statement_tool_handles_empty_data():
     mcp = FastMCP("test")
     register(mcp, adapter)
 
-    result = await mcp.call_tool(
-        "get_financial_statement", {"code": "600519"}
-    )
+    result = await mcp.call_tool("get_financial_statement", {"code": "600519"})
     text = result.content[0].text
     assert "❌" in text
     assert "无" in text

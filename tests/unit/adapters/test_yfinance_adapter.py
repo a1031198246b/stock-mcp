@@ -1,13 +1,10 @@
 """yfinance 适配器单测 (mock yfinance 库)"""
+
 import sys
-from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
-
-from stock_mcp.domain.errors import DataSourceError
-from stock_mcp.domain.models import Kline
 
 
 class FakeYfModule:
@@ -28,6 +25,7 @@ def test_initialize_enabled_when_yfinance_installed(monkeypatch, fake_yfinance):
     """yfinance 装着 → enabled=True, supported_markets 含 hk/us"""
     monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
     from stock_mcp.adapters.yfinance_source import YfinanceAdapter
+
     a = YfinanceAdapter()
     a.initialize()
     assert a.enabled is True
@@ -41,6 +39,7 @@ def test_initialize_disabled_when_yfinance_not_installed(monkeypatch):
     monkeypatch.setitem(sys.modules, "yfinance", None)
     monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
     from stock_mcp.adapters.yfinance_source import YfinanceAdapter
+
     a = YfinanceAdapter()
     a.initialize()
     assert a.enabled is False
@@ -91,6 +90,7 @@ async def test_a_stock_market_raises_value_error(monkeypatch, fake_yfinance):
     """yfinance 不服务 A 股, 显式 raise (上层不该路由过来)"""
     monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
     from stock_mcp.adapters.yfinance_source import YfinanceAdapter
+
     a = YfinanceAdapter()
     a.initialize()
     with pytest.raises(ValueError, match="a_stock"):
@@ -103,14 +103,16 @@ async def test_get_kline_hk(monkeypatch, fake_yfinance):
     monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
     from stock_mcp.adapters.yfinance_source import YfinanceAdapter
 
-    history_df = pd.DataFrame({
-        "Date": pd.to_datetime(["2026-06-09", "2026-06-10", "2026-06-11"]),
-        "Open": [340.0, 345.0, 350.0],
-        "High": [355.0, 358.0, 360.0],
-        "Low": [338.0, 342.0, 348.0],
-        "Close": [350.0, 355.0, 358.0],
-        "Volume": [1000000, 1100000, 1200000],
-    })
+    history_df = pd.DataFrame(
+        {
+            "Date": pd.to_datetime(["2026-06-09", "2026-06-10", "2026-06-11"]),
+            "Open": [340.0, 345.0, 350.0],
+            "High": [355.0, 358.0, 360.0],
+            "Low": [338.0, 342.0, 348.0],
+            "Close": [350.0, 355.0, 358.0],
+            "Volume": [1000000, 1100000, 1200000],
+        }
+    )
     fake_yfinance.Ticker.return_value.history.return_value = history_df
 
     a = YfinanceAdapter()
@@ -157,6 +159,7 @@ async def test_get_news_returns_empty_or_list(monkeypatch, fake_yfinance):
     """yfinance .news 返回 list 或空 list"""
     monkeypatch.setenv("TDX_PATH", "C:/fake/tdx")
     from stock_mcp.adapters.yfinance_source import YfinanceAdapter
+
     fake_yfinance.Ticker.return_value.news = []
     a = YfinanceAdapter()
     a.initialize()

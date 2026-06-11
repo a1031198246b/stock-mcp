@@ -151,9 +151,7 @@ async def test_quote_tool_forwards_market_to_service(temp_cache_dir):
     register(mcp, svc)
 
     # 传 market="us"
-    result = await mcp.call_tool(
-        "get_realtime_quote", {"codes": ["AAPL"], "market": "us"}
-    )
+    result = await mcp.call_tool("get_realtime_quote", {"codes": ["AAPL"], "market": "us"})
     text = result.content[0].text
     # 工具返回的 markdown 里应包含 AAPL
     assert "AAPL" in text

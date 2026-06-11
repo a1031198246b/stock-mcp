@@ -5,7 +5,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-
 Market = Literal["a_stock", "hk", "us"]
 
 
@@ -74,6 +73,7 @@ class StockQueryResult(BaseModel):
 
 class FinancialStatement(BaseModel):
     """baostock 财务三表"""
+
     code: str
     name: str
     market: Market

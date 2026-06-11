@@ -14,9 +14,7 @@ class NewsService:
         self._cache = cache
         self._ttl_calc = ttl_calc
 
-    async def get_news(
-        self, code: str, limit: int, market: str = "a_stock"
-    ) -> list[NewsItem]:
+    async def get_news(self, code: str, limit: int, market: str = "a_stock") -> list[NewsItem]:
         # 0. 选 market 子集
         sub = [
             a
@@ -24,9 +22,7 @@ class NewsService:
             if a.enabled and market in a.supported_markets
         ]
         if not sub:
-            raise ValueError(
-                f"market={market} 无可用适配器 (支持: a_stock/hk/us)"
-            )
+            raise ValueError(f"market={market} 无可用适配器 (支持: a_stock/hk/us)")
 
         bucket = self._ttl_calc.bucket_for("news")
         key = f"news:{code}:{limit}:{bucket}"

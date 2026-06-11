@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from functools import wraps
-from typing import List
 
 from ..domain.models import Fundamental, Kline, NewsItem, Quote, StockQueryResult
 
@@ -13,7 +12,7 @@ class BaseAdapter(ABC):
     name: str = "abstract"
     priority: int = 100  # 数字越小越优先
     enabled: bool = True
-    supported_markets: List[str] = ["a_stock"]  # 默认仅 A 股
+    supported_markets: list[str] = ["a_stock"]  # 默认仅 A 股
 
     async def health_check(self) -> bool:
         """默认实现：始终健康。子类可重写做真实检查。"""
@@ -25,7 +24,9 @@ class BaseAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_kline(self, code: str, period: str, count: int, market: str = "a_stock") -> list[Kline]:
+    async def get_kline(
+        self, code: str, period: str, count: int, market: str = "a_stock"
+    ) -> list[Kline]:
         """获取 K 线，period ∈ {1m, 5m, 15m, 30m, 1h, 1d, 1w, 1M}"""
         raise NotImplementedError
 

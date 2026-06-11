@@ -3,8 +3,9 @@
 baostock 强项: A 股历史数据准, 财务三表全
 弱项: 无实时行情, 无资讯
 """
+
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -86,22 +87,23 @@ class BaostockAdapter(BaseAdapter):
             )
         self._logged_in = True
 
-    async def get_realtime_quote(
-        self, codes: List[str], market: Market = "a_stock"
-    ) -> List[Quote]:
+    async def get_realtime_quote(self, codes: list[str], market: Market = "a_stock") -> list[Quote]:
         # baostock 无官方实时接口, 显式抛 (上层 fallback)
-        raise DataSourceError(
-            "baostock 不支持实时行情, 用 tqcenter 或 sina", source=self.name
-        )
+        raise DataSourceError("baostock 不支持实时行情, 用 tqcenter 或 sina", source=self.name)
 
     async def get_kline(
         self, code: str, period: str, count: int, market: Market = "a_stock"
-    ) -> List[Kline]:
+    ) -> list[Kline]:
         self._login()
         # baostock period: d/w/m/5/15/30/60
         period_map = {
-            "1d": "d", "1w": "w", "1M": "m",
-            "5m": "5", "15m": "15", "30m": "30", "60m": "60",
+            "1d": "d",
+            "1w": "w",
+            "1M": "m",
+            "5m": "5",
+            "15m": "15",
+            "30m": "30",
+            "60m": "60",
         }
         bs_period = period_map.get(period)
         if not bs_period:
@@ -112,8 +114,10 @@ class BaostockAdapter(BaseAdapter):
             rs = self._bs.query_history_k_data_plus(
                 code=_to_bs_code(code),
                 fields="date,open,high,low,close,volume,amount",
-                start_date="", end_date=end_date,
-                frequency=bs_period, adjustflag="2",  # 前复权
+                start_date="",
+                end_date=end_date,
+                frequency=bs_period,
+                adjustflag="2",  # 前复权
             )
         except Exception as e:
             raise DataSourceError(str(e), source=self.name) from e
@@ -124,14 +128,18 @@ class BaostockAdapter(BaseAdapter):
             return []
         # 取最后 count 条
         df = df.tail(count)
-        klines: List[Kline] = []
+        klines: list[Kline] = []
         for _, row in df.iterrows():
             klines.append(
                 Kline(
-                    code=code, period=period, market=market,
+                    code=code,
+                    period=period,
+                    market=market,
                     datetime=pd.Timestamp(row["date"]).to_pydatetime(),
-                    open=float(row["open"]), high=float(row["high"]),
-                    low=float(row["low"]), close=float(row["close"]),
+                    open=float(row["open"]),
+                    high=float(row["high"]),
+                    low=float(row["low"]),
+                    close=float(row["close"]),
                     volume=int(float(row["volume"])),
                     amount=float(row["amount"]),
                     source=self.name,
@@ -139,15 +147,11 @@ class BaostockAdapter(BaseAdapter):
             )
         return klines
 
-    async def get_fundamental(
-        self, code: str, market: Market = "a_stock"
-    ) -> Optional[Fundamental]:
+    async def get_fundamental(self, code: str, market: Market = "a_stock") -> Fundamental | None:
         # 财务数据走 get_financial_statement, 此方法不重复
         raise NotImplementedError
 
-    async def get_news(
-        self, code: str, limit: int, market: Market = "a_stock"
-    ) -> List[NewsItem]:
+    async def get_news(self, code: str, limit: int, market: Market = "a_stock") -> list[NewsItem]:
         raise NotImplementedError
 
     async def get_financial_statement(
@@ -179,11 +183,11 @@ class BaostockAdapter(BaseAdapter):
                     break
 
         # data 结构: {col_name: [row_values...]}, 测试断言 data["roeAvg"][0] ≈ 0.10
-        data: Dict[str, List[Any]] = {}
+        data: dict[str, list[Any]] = {}
         period = ""
         if df is not None and not df.empty:
             for col in df.columns:
-                col_values: List[Any] = []
+                col_values: list[Any] = []
                 for v in df[col].tolist():
                     if v is None or (isinstance(v, float) and pd.isna(v)):
                         col_values.append(None)
@@ -192,11 +196,16 @@ class BaostockAdapter(BaseAdapter):
                 data[col] = col_values
             if "statDate" in df.columns and len(df) > 0:
                 first_stat = df["statDate"].iloc[0]
-                period = str(first_stat) if first_stat is not None and not pd.isna(first_stat) else ""
+                period = (
+                    str(first_stat) if first_stat is not None and not pd.isna(first_stat) else ""
+                )
 
         return FinancialStatement(
-            code=code, name=name, market=market,
-            period=period, statement_type=statement_type,
+            code=code,
+            name=name,
+            market=market,
+            period=period,
+            statement_type=statement_type,
             data=data,
             source=self.name,
             fetched_at=datetime.now(),

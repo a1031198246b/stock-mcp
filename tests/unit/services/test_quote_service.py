@@ -106,18 +106,21 @@ async def test_get_quote_fallback_when_primary_fails(sqlite_cache, ttl_calc):
 @pytest.mark.asyncio
 async def test_a_stock_routes_to_a_stock_adapters_only(temp_cache_dir):
     """a_stock 路由只调 a_stock 适配器, 不调 yfinance"""
+    from stock_mcp.adapters.registry import AdapterRegistry
     from stock_mcp.adapters.sina import SinaAdapter
     from stock_mcp.adapters.yfinance_source import YfinanceAdapter
     from stock_mcp.services.quote_service import QuoteService
-    from stock_mcp.adapters.registry import AdapterRegistry
 
     sina = SinaAdapter()
     yf = YfinanceAdapter()
-    sina.enabled = True; sina.supported_markets = ["a_stock"]
-    yf.enabled = True; yf.supported_markets = ["hk", "us"]
+    sina.enabled = True
+    sina.supported_markets = ["a_stock"]
+    yf.enabled = True
+    yf.supported_markets = ["hk", "us"]
 
     from stock_mcp.cache.sqlite_cache import SQLiteCache
     from stock_mcp.cache.ttl import TTLCalculator
+
     cache = SQLiteCache(temp_cache_dir / "test.db")
     ttl = TTLCalculator()
     registry = AdapterRegistry([sina, yf])
@@ -132,16 +135,21 @@ async def test_a_stock_routes_to_a_stock_adapters_only(temp_cache_dir):
 @pytest.mark.asyncio
 async def test_hk_routes_to_yfinance_only(temp_cache_dir):
     """hk 路由只调 yfinance"""
+    from stock_mcp.adapters.registry import AdapterRegistry
     from stock_mcp.adapters.sina import SinaAdapter
     from stock_mcp.adapters.yfinance_source import YfinanceAdapter
     from stock_mcp.services.quote_service import QuoteService
-    from stock_mcp.adapters.registry import AdapterRegistry
 
-    sina = SinaAdapter(); sina.enabled = True; sina.supported_markets = ["a_stock"]
-    yf = YfinanceAdapter(); yf.enabled = True; yf.supported_markets = ["hk", "us"]
+    sina = SinaAdapter()
+    sina.enabled = True
+    sina.supported_markets = ["a_stock"]
+    yf = YfinanceAdapter()
+    yf.enabled = True
+    yf.supported_markets = ["hk", "us"]
 
     from stock_mcp.cache.sqlite_cache import SQLiteCache
     from stock_mcp.cache.ttl import TTLCalculator
+
     cache = SQLiteCache(temp_cache_dir / "test.db")
     ttl = TTLCalculator()
     registry = AdapterRegistry([sina, yf])
@@ -149,21 +157,26 @@ async def test_hk_routes_to_yfinance_only(temp_cache_dir):
 
     # hk 应该试 yfinance, 不应试 sina
     # 这里只验证子集过滤正确, 实际 yfinance 调用会失败 (无网络)
-    with pytest.raises(Exception):  # 任何 yfinance 异常都接受
+    with pytest.raises((DataSourceError, ValueError, ConnectionError, OSError)):
         await svc.get_realtime_quote(["00700"], market="hk")
 
 
 @pytest.mark.asyncio
 async def test_unknown_market_raises_value_error(temp_cache_dir):
+    from stock_mcp.adapters.registry import AdapterRegistry
     from stock_mcp.adapters.sina import SinaAdapter
     from stock_mcp.adapters.yfinance_source import YfinanceAdapter
     from stock_mcp.services.quote_service import QuoteService
-    from stock_mcp.adapters.registry import AdapterRegistry
 
-    sina = SinaAdapter(); sina.enabled = True; sina.supported_markets = ["a_stock"]
-    yf = YfinanceAdapter(); yf.enabled = True; yf.supported_markets = ["hk", "us"]
+    sina = SinaAdapter()
+    sina.enabled = True
+    sina.supported_markets = ["a_stock"]
+    yf = YfinanceAdapter()
+    yf.enabled = True
+    yf.supported_markets = ["hk", "us"]
     from stock_mcp.cache.sqlite_cache import SQLiteCache
     from stock_mcp.cache.ttl import TTLCalculator
+
     cache = SQLiteCache(temp_cache_dir / "test.db")
     ttl = TTLCalculator()
     registry = AdapterRegistry([sina, yf])
@@ -177,6 +190,7 @@ async def test_unknown_market_raises_value_error(temp_cache_dir):
 async def test_service_forwards_market_to_adapter(temp_cache_dir):
     """service 调 adapter 时应该把 market 传过去"""
     from datetime import datetime
+
     from stock_mcp.adapters.base import BaseAdapter
     from stock_mcp.adapters.registry import AdapterRegistry
     from stock_mcp.cache.sqlite_cache import SQLiteCache

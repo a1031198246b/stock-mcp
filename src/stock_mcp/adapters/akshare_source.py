@@ -21,7 +21,9 @@ class AkshareAdapter(BaseAdapter):
         """akshare 不擅长实时行情, 让位给 tqcenter / sina"""
         return []
 
-    async def get_kline(self, code: str, period: str, count: int, market: str = "a_stock") -> list[Kline]:
+    async def get_kline(
+        self, code: str, period: str, count: int, market: str = "a_stock"
+    ) -> list[Kline]:
         if ak is None:
             raise DataSourceError("akshare 未安装", source=self.name)
         try:

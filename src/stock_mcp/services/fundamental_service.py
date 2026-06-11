@@ -12,9 +12,7 @@ class FundamentalService:
         self._cache = cache
         self._ttl_calc = ttl_calc
 
-    async def get_fundamental(
-        self, code: str, market: str = "a_stock"
-    ) -> Fundamental | None:
+    async def get_fundamental(self, code: str, market: str = "a_stock") -> Fundamental | None:
         # 0. 选 market 子集
         sub = [
             a
@@ -22,9 +20,7 @@ class FundamentalService:
             if a.enabled and market in a.supported_markets
         ]
         if not sub:
-            raise ValueError(
-                f"market={market} 无可用适配器 (支持: a_stock/hk/us)"
-            )
+            raise ValueError(f"market={market} 无可用适配器 (支持: a_stock/hk/us)")
 
         key = f"fundamental:{code}"
         cached = await self._cache.get(key)

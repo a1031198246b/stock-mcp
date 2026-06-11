@@ -17,9 +17,7 @@ class QuoteService:
         self._cache = cache
         self._ttl_calc = ttl_calc
 
-    async def get_realtime_quote(
-        self, codes: list[str], market: str = "a_stock"
-    ) -> list[Quote]:
+    async def get_realtime_quote(self, codes: list[str], market: str = "a_stock") -> list[Quote]:
         # 0. 选 market 子集
         sub = [
             a
@@ -27,9 +25,7 @@ class QuoteService:
             if a.enabled and market in a.supported_markets
         ]
         if not sub:
-            raise ValueError(
-                f"market={market} 无可用适配器 (支持: a_stock/hk/us)"
-            )
+            raise ValueError(f"market={market} 无可用适配器 (支持: a_stock/hk/us)")
 
         # 1. 查缓存（按桶）
         bucket = self._ttl_calc.bucket_for("realtime_quote")

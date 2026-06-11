@@ -3,9 +3,8 @@
 yfinance 强项: 全球市场 (美股/港股/欧股), 财经数据全
 弱项: 实时 15min 延迟, 国内访问常被墙 (用 HTTP_PROXY 缓解)
 """
-import sys
+
 from datetime import datetime
-from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -19,11 +18,10 @@ from ..domain.models import (
 )
 from .base import BaseAdapter
 
-
 # period 字符串 → yfinance 调 history 的 period 参数
 _PERIOD_MAP = {
-    "1d": "1y",   # 1d K线, yfinance 一次最多拉 1y
-    "1w": "5y",   # 1w K线
+    "1d": "1y",  # 1d K线, yfinance 一次最多拉 1y
+    "1w": "5y",  # 1w K线
     "1M": "10y",  # 1M K线
     "5m": "60d",
     "15m": "60d",
@@ -71,7 +69,7 @@ class YfinanceAdapter(BaseAdapter):
         self._yf = yf
         self.enabled = True
 
-    async def get_realtime_quote(self, codes: List[str], market: Market = "us") -> List[Quote]:
+    async def get_realtime_quote(self, codes: list[str], market: Market = "us") -> list[Quote]:
         if market not in self.supported_markets:
             raise ValueError(f"yfinance 不服务 {market} 市场 (仅 hk/us)")
         results = []
@@ -85,16 +83,25 @@ class YfinanceAdapter(BaseAdapter):
                 if price <= 0:
                     continue
                 change_pct = ((price - last_close) / last_close * 100) if last_close > 0 else 0.0
-                currency = str(fi.currency) if fi.currency else ""
-                results.append(Quote(
-                    code=code, name=yf_code,  # name 暂用 yf_code (info 有 shortName)
-                    price=round(price, 4), change_pct=round(change_pct, 2),
-                    amount=0.0, volume=0,
-                    open=0.0, high=0.0, low=0.0, last_close=last_close,
-                    bid_5=[0]*5, ask_5=[0]*5,
-                    timestamp=datetime.now(),
-                    source=self.name, market=market,
-                ))
+                results.append(
+                    Quote(
+                        code=code,
+                        name=yf_code,  # name 暂用 yf_code (info 有 shortName)
+                        price=round(price, 4),
+                        change_pct=round(change_pct, 2),
+                        amount=0.0,
+                        volume=0,
+                        open=0.0,
+                        high=0.0,
+                        low=0.0,
+                        last_close=last_close,
+                        bid_5=[0] * 5,
+                        ask_5=[0] * 5,
+                        timestamp=datetime.now(),
+                        source=self.name,
+                        market=market,
+                    )
+                )
             except Exception as e:
                 # 网络失败 (国内访问) — 抛友好错误
                 msg = str(e)
@@ -106,7 +113,9 @@ class YfinanceAdapter(BaseAdapter):
                 raise DataSourceError(str(e), source=self.name) from e
         return results
 
-    async def get_kline(self, code: str, period: str, count: int, market: Market = "us") -> List[Kline]:
+    async def get_kline(
+        self, code: str, period: str, count: int, market: Market = "us"
+    ) -> list[Kline]:
         if market not in self.supported_markets:
             raise ValueError(f"yfinance 不服务 {market} 市场")
         yf_period = _PERIOD_MAP.get(period, "1y")
@@ -126,19 +135,24 @@ class YfinanceAdapter(BaseAdapter):
                 dt = pd.Timestamp(idx).to_pydatetime(warn=False)
             except Exception:
                 dt = datetime.now()
-            klines.append(Kline(
-                code=code, period=period, market=market, datetime=dt,
-                open=float(row.get("Open", 0)),
-                high=float(row.get("High", 0)),
-                low=float(row.get("Low", 0)),
-                close=float(row.get("Close", 0)),
-                volume=int(float(row.get("Volume", 0))),
-                amount=0.0,
-                source=self.name,
-            ))
+            klines.append(
+                Kline(
+                    code=code,
+                    period=period,
+                    market=market,
+                    datetime=dt,
+                    open=float(row.get("Open", 0)),
+                    high=float(row.get("High", 0)),
+                    low=float(row.get("Low", 0)),
+                    close=float(row.get("Close", 0)),
+                    volume=int(float(row.get("Volume", 0))),
+                    amount=0.0,
+                    source=self.name,
+                )
+            )
         return klines
 
-    async def get_fundamental(self, code: str, market: Market = "us") -> Optional[Fundamental]:
+    async def get_fundamental(self, code: str, market: Market = "us") -> Fundamental | None:
         if market not in self.supported_markets:
             raise ValueError(f"yfinance 不服务 {market} 市场")
         yf_code = _format_yf_code(code, market)
@@ -149,16 +163,19 @@ class YfinanceAdapter(BaseAdapter):
         if not info:
             return None
         return Fundamental(
-            code=code, name=info.get("shortName", yf_code),
-            pe=info.get("trailingPE"), pb=info.get("priceToBook"),
+            code=code,
+            name=info.get("shortName", yf_code),
+            pe=info.get("trailingPE"),
+            pb=info.get("priceToBook"),
             roe=info.get("returnOnEquity"),
             total_shares=None,  # yfinance .info 不直接给股数
             market_cap=(info.get("marketCap") or 0) / 1e8 if info.get("marketCap") else None,
             industry=None,
-            source=self.name, market=market,
+            source=self.name,
+            market=market,
         )
 
-    async def get_news(self, code: str, limit: int, market: Market = "us") -> List[NewsItem]:
+    async def get_news(self, code: str, limit: int, market: Market = "us") -> list[NewsItem]:
         if market not in self.supported_markets:
             raise ValueError(f"yfinance 不服务 {market} 市场")
         try:
@@ -167,12 +184,15 @@ class YfinanceAdapter(BaseAdapter):
             return []
         items = []
         for n in news_list[:limit]:
-            items.append(NewsItem(
-                code=code, market=market,
-                title=n.get("title", ""),
-                url=n.get("link", ""),
-                publish_time=datetime.fromtimestamp(n.get("providerPublishTime", 0)),
-                source=n.get("publisher", "yfinance"),
-                summary=None,
-            ))
+            items.append(
+                NewsItem(
+                    code=code,
+                    market=market,
+                    title=n.get("title", ""),
+                    url=n.get("link", ""),
+                    publish_time=datetime.fromtimestamp(n.get("providerPublishTime", 0)),
+                    source=n.get("publisher", "yfinance"),
+                    summary=None,
+                )
+            )
         return items

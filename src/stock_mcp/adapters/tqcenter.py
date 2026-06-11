@@ -166,7 +166,9 @@ class TqcenterAdapter(BaseAdapter):
         "1M": "1mon",  # 月线
     }
 
-    async def get_kline(self, code: str, period: str, count: int, market: str = "a_stock") -> list[Kline]:
+    async def get_kline(
+        self, code: str, period: str, count: int, market: str = "a_stock"
+    ) -> list[Kline]:
         if not self._initialized:
             raise DataSourceError("tqcenter 未初始化", source=self.name)
         if period not in self._PERIOD_MAP:

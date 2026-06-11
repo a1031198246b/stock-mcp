@@ -8,9 +8,7 @@ from ..services.news_service import NewsService
 
 def register(mcp: FastMCP, service: NewsService) -> None:
     @mcp.tool()
-    async def get_news(
-        code: str, limit: int = 20, market: str = "a_stock"
-    ) -> str:
+    async def get_news(code: str, limit: int = 20, market: str = "a_stock") -> str:
         """获取股票资讯和公告
 
         Args:

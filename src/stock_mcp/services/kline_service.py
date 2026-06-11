@@ -22,9 +22,7 @@ class KlineService:
             if a.enabled and market in a.supported_markets
         ]
         if not sub:
-            raise ValueError(
-                f"market={market} 无可用适配器 (支持: a_stock/hk/us)"
-            )
+            raise ValueError(f"market={market} 无可用适配器 (支持: a_stock/hk/us)")
 
         bucket = self._ttl_calc.bucket_for(
             "kline_daily" if period in ("1d", "1w", "1M") else "kline"

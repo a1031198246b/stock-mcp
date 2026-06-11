@@ -1,5 +1,7 @@
 """财务三表 MCP 工具 (仅 baostock 实现)"""
+
 from fastmcp import FastMCP
+
 from ..domain.errors import DataSourceError
 
 

@@ -93,12 +93,15 @@ def test_create_server_registers_ping_tool(mock_adapters):
 
 def test_create_server_registers_baostock_and_yfinance(mock_adapters):
     """server 应该装配 baostock + yfinance 适配器"""
-    from stock_mcp.server import create_server
     from fastmcp import FastMCP
+
+    from stock_mcp.server import create_server
+
     mcp = create_server()
     assert isinstance(mcp, FastMCP)
     # 验证 baostock / yfinance 适配器已注册 (通过 list_tools 看)
     import asyncio
+
     tools = asyncio.run(mcp.list_tools())
     tool_names = {t.name for t in tools}
     # financial_statement 应该被注册
