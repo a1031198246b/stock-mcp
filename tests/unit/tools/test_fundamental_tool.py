@@ -19,16 +19,16 @@ class FakeAdapter(BaseAdapter):
         self.priority = 1
         self.enabled = True
 
-    async def get_realtime_quote(self, codes):
+    async def get_realtime_quote(self, codes, market: str = "a_stock"):
         return []
 
-    async def get_kline(self, code, period, count):
+    async def get_kline(self, code, period, count, market: str = "a_stock"):
         return []
 
-    async def get_fundamental(self, code):
+    async def get_fundamental(self, code, market: str = "a_stock"):
         return self._f if code == self._f.code else None
 
-    async def get_news(self, code, limit):
+    async def get_news(self, code, limit, market: str = "a_stock"):
         return []
 
 
@@ -76,18 +76,18 @@ class _ErrorAdapter(BaseAdapter):
         self.priority = 1
         self.enabled = True
 
-    async def get_realtime_quote(self, codes):
+    async def get_realtime_quote(self, codes, market: str = "a_stock"):
         return []
 
-    async def get_kline(self, code, period, count):
+    async def get_kline(self, code, period, count, market: str = "a_stock"):
         return []
 
-    async def get_fundamental(self, code):
+    async def get_fundamental(self, code, market: str = "a_stock"):
         from stock_mcp.domain.errors import DataSourceError
 
         raise DataSourceError("parse fail", source="akshare")
 
-    async def get_news(self, code, limit):
+    async def get_news(self, code, limit, market: str = "a_stock"):
         return []
 
 

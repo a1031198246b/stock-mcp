@@ -80,7 +80,7 @@ class SinaAdapter(BaseAdapter):
             )
         return self._client
 
-    async def get_realtime_quote(self, codes: list[str]) -> list[Quote]:
+    async def get_realtime_quote(self, codes: list[str], market: str = "a_stock") -> list[Quote]:
         sina_codes = [_to_sina_code(c) for c in codes]
         url = f"{self.BASE_URL}/list={','.join(sina_codes)}"
         try:
@@ -102,11 +102,11 @@ class SinaAdapter(BaseAdapter):
             results.append(q)
         return results
 
-    async def get_kline(self, code, period, count):
+    async def get_kline(self, code, period, count, market: str = "a_stock"):
         return []
 
-    async def get_fundamental(self, code):
+    async def get_fundamental(self, code, market: str = "a_stock"):
         return None
 
-    async def get_news(self, code, limit):
+    async def get_news(self, code, limit, market: str = "a_stock"):
         return []

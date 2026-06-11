@@ -27,19 +27,19 @@ class FakeKlineAdapter(BaseAdapter):
         self._error = error
         self.call_count = 0
 
-    async def get_realtime_quote(self, codes):
+    async def get_realtime_quote(self, codes, market: str = "a_stock"):
         return []
 
-    async def get_kline(self, code, period, count):
+    async def get_kline(self, code, period, count, market: str = "a_stock"):
         self.call_count += 1
         if self._error is not None:
             raise self._error
         return [k for k in self._klines if k.code == code and k.period == period]
 
-    async def get_fundamental(self, code):
+    async def get_fundamental(self, code, market: str = "a_stock"):
         return None
 
-    async def get_news(self, code, limit):
+    async def get_news(self, code, limit, market: str = "a_stock"):
         return []
 
 

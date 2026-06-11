@@ -21,17 +21,17 @@ class FakeAdapter(BaseAdapter):
         self._quotes = quotes
         self.call_count = 0
 
-    async def get_realtime_quote(self, codes):
+    async def get_realtime_quote(self, codes, market="a_stock"):
         self.call_count += 1
         return [q for q in self._quotes if q.code in codes]
 
-    async def get_kline(self, code, period, count):
+    async def get_kline(self, code, period, count, market="a_stock"):
         return []
 
-    async def get_fundamental(self, code):
+    async def get_fundamental(self, code, market="a_stock"):
         return None
 
-    async def get_news(self, code, limit):
+    async def get_news(self, code, limit, market="a_stock"):
         return []
 
 
@@ -171,3 +171,65 @@ async def test_unknown_market_raises_value_error(temp_cache_dir):
 
     with pytest.raises(ValueError, match="jp"):
         await svc.get_realtime_quote(["7203"], market="jp")
+
+
+@pytest.mark.asyncio
+async def test_service_forwards_market_to_adapter(temp_cache_dir):
+    """service 调 adapter 时应该把 market 传过去"""
+    from datetime import datetime
+    from stock_mcp.adapters.base import BaseAdapter
+    from stock_mcp.adapters.registry import AdapterRegistry
+    from stock_mcp.cache.sqlite_cache import SQLiteCache
+    from stock_mcp.cache.ttl import TTLCalculator
+    from stock_mcp.domain.models import Quote
+
+    received_markets = []
+
+    class TrackingAdapter(BaseAdapter):
+        def __init__(self):
+            self.name = "track"
+            self.priority = 1
+            self.enabled = True
+            self.supported_markets = ["hk", "us"]
+
+        async def get_realtime_quote(self, codes, market="a_stock"):
+            received_markets.append(market)
+            return [
+                Quote(
+                    code=c,
+                    name="X",
+                    price=100,
+                    change_pct=0,
+                    amount=0,
+                    volume=0,
+                    open=100,
+                    high=100,
+                    low=100,
+                    last_close=100,
+                    bid_5=[0] * 5,
+                    ask_5=[0] * 5,
+                    timestamp=datetime.now(),
+                    source="track",
+                    market=market,
+                )
+                for c in codes
+            ]
+
+        async def get_kline(self, code, period, count, market="a_stock"):
+            return []
+
+        async def get_fundamental(self, code, market="a_stock"):
+            return None
+
+        async def get_news(self, code, limit, market="a_stock"):
+            return []
+
+    adapter = TrackingAdapter()
+    registry = AdapterRegistry([adapter])
+    cache = SQLiteCache(temp_cache_dir / "test.db")
+    ttl = TTLCalculator()
+    svc = QuoteService(registry, cache, ttl)
+
+    await svc.get_realtime_quote(["AAPL"], market="us")
+    await svc.get_realtime_quote(["00700"], market="hk")
+    assert received_markets == ["us", "hk"], f"Expected ['us', 'hk'], got {received_markets}"

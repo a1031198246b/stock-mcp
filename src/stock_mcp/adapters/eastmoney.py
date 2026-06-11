@@ -19,16 +19,16 @@ class EastmoneyAdapter(BaseAdapter):
 
     BASE_URL = "https://np-anotice-stock.eastmoney.com/api/security/ann"
 
-    async def get_realtime_quote(self, codes):
+    async def get_realtime_quote(self, codes, market: str = "a_stock"):
         return []
 
-    async def get_kline(self, code, period, count):
+    async def get_kline(self, code, period, count, market: str = "a_stock"):
         return []
 
-    async def get_fundamental(self, code):
+    async def get_fundamental(self, code, market: str = "a_stock"):
         return None
 
-    async def get_news(self, code: str, limit: int) -> list[NewsItem]:
+    async def get_news(self, code: str, limit: int, market: str = "a_stock") -> list[NewsItem]:
         """获取公告 (ann_type=A)
 
         真实响应结构 (验证于 2026-06-10):

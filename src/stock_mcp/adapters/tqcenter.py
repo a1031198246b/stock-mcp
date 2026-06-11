@@ -112,7 +112,7 @@ class TqcenterAdapter(BaseAdapter):
         # 兜底: 不知道的市场, 原样返回
         return c
 
-    async def get_realtime_quote(self, codes: list[str]) -> list[Quote]:
+    async def get_realtime_quote(self, codes: list[str], market: str = "a_stock") -> list[Quote]:
         if not self._initialized:
             raise DataSourceError("tqcenter 未初始化", source=self.name)
 
@@ -166,7 +166,7 @@ class TqcenterAdapter(BaseAdapter):
         "1M": "1mon",  # 月线
     }
 
-    async def get_kline(self, code: str, period: str, count: int) -> list[Kline]:
+    async def get_kline(self, code: str, period: str, count: int, market: str = "a_stock") -> list[Kline]:
         if not self._initialized:
             raise DataSourceError("tqcenter 未初始化", source=self.name)
         if period not in self._PERIOD_MAP:
@@ -257,7 +257,7 @@ class TqcenterAdapter(BaseAdapter):
         except Exception as e:
             raise DataSourceError(str(e), source=self.name) from e
 
-    async def get_fundamental(self, code: str) -> Fundamental | None:
+    async def get_fundamental(self, code: str, market: str = "a_stock") -> Fundamental | None:
         """从 tqcenter.get_stock_info + 实时价 拼出基本面
 
         tqcenter 本身不直接提供 PE/PB, 但提供:
@@ -340,7 +340,7 @@ class TqcenterAdapter(BaseAdapter):
     # 硬编码容易错 (我之前编的 45 个有近一半错). 上层 (UI / iwencai / akshare) 拿到后
     # 可查公开的证监会行业分类做转换. 这里只保证 raw code 正确.
 
-    async def get_news(self, code: str, limit: int) -> list[NewsItem]:
+    async def get_news(self, code: str, limit: int, market: str = "a_stock") -> list[NewsItem]:
         """P1 阶段先返回空"""
         return []
 

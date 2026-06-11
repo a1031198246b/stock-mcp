@@ -32,7 +32,7 @@ class FundamentalService:
             return Fundamental.model_validate_json(cached)
 
         result = await self._registry.fan_out_in_sublist(
-            sub, "get_fundamental", code=code
+            sub, "get_fundamental", code=code, market=market
         )
         if result:
             ttl = self._ttl_calc.ttl_seconds("fundamental")

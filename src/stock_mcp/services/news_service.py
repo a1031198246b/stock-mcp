@@ -36,7 +36,7 @@ class NewsService:
             return [NewsItem.model_validate(item) for item in data]
 
         items = await self._registry.fan_out_in_sublist(
-            sub, "get_news", code=code, limit=limit
+            sub, "get_news", code=code, limit=limit, market=market
         )
         ttl = self._ttl_calc.ttl_seconds("news")
         await self._cache.set(key, json.dumps([n.model_dump(mode="json") for n in items]), ttl=ttl)

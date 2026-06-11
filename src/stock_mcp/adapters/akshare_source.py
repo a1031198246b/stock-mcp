@@ -17,11 +17,11 @@ class AkshareAdapter(BaseAdapter):
     priority = 3
     enabled = ak is not None
 
-    async def get_realtime_quote(self, codes: list[str]) -> list[Quote]:
+    async def get_realtime_quote(self, codes: list[str], market: str = "a_stock") -> list[Quote]:
         """akshare 不擅长实时行情, 让位给 tqcenter / sina"""
         return []
 
-    async def get_kline(self, code: str, period: str, count: int) -> list[Kline]:
+    async def get_kline(self, code: str, period: str, count: int, market: str = "a_stock") -> list[Kline]:
         if ak is None:
             raise DataSourceError("akshare 未安装", source=self.name)
         try:
@@ -52,7 +52,7 @@ class AkshareAdapter(BaseAdapter):
             )
         return klines
 
-    async def get_fundamental(self, code: str) -> Fundamental | None:
+    async def get_fundamental(self, code: str, market: str = "a_stock") -> Fundamental | None:
         if ak is None:
             raise DataSourceError("akshare 未安装", source=self.name)
         try:
@@ -75,7 +75,7 @@ class AkshareAdapter(BaseAdapter):
             source=self.name,
         )
 
-    async def get_news(self, code: str, limit: int) -> list[NewsItem]:
+    async def get_news(self, code: str, limit: int, market: str = "a_stock") -> list[NewsItem]:
         if ak is None:
             return []
         try:

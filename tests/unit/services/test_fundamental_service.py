@@ -18,16 +18,16 @@ class FakeFundAdapter(BaseAdapter):
         self.priority = 1
         self.enabled = True
 
-    async def get_realtime_quote(self, codes):
+    async def get_realtime_quote(self, codes, market: str = "a_stock"):
         return []
 
-    async def get_kline(self, code, period, count):
+    async def get_kline(self, code, period, count, market: str = "a_stock"):
         return []
 
-    async def get_fundamental(self, code):
+    async def get_fundamental(self, code, market: str = "a_stock"):
         return self._f if code == self._f.code else None
 
-    async def get_news(self, code, limit):
+    async def get_news(self, code, limit, market: str = "a_stock"):
         return []
 
 

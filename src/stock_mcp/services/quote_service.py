@@ -48,7 +48,7 @@ class QuoteService:
 
         # 2. 在子集内 fallback
         fresh = await self._registry.fan_out_in_sublist(
-            sub, "get_realtime_quote", codes=missing
+            sub, "get_realtime_quote", codes=missing, market=market
         )
 
         # 3. 写缓存

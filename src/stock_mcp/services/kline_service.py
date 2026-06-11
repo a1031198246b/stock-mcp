@@ -38,7 +38,7 @@ class KlineService:
             return [Kline.model_validate(item) for item in data]
 
         klines = await self._registry.fan_out_in_sublist(
-            sub, "get_kline", code=code, period=period, count=count
+            sub, "get_kline", code=code, period=period, count=count, market=market
         )
         ttl = self._ttl_calc.ttl_seconds("kline_daily" if period in ("1d", "1w", "1M") else "kline")
         import json
