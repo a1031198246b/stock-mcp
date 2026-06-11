@@ -17,7 +17,20 @@ class QuoteService:
         self._cache = cache
         self._ttl_calc = ttl_calc
 
-    async def get_realtime_quote(self, codes: list[str]) -> list[Quote]:
+    async def get_realtime_quote(
+        self, codes: list[str], market: str = "a_stock"
+    ) -> list[Quote]:
+        # 0. 选 market 子集
+        sub = [
+            a
+            for a in self._registry.adapters_in_order()
+            if a.enabled and market in a.supported_markets
+        ]
+        if not sub:
+            raise ValueError(
+                f"market={market} 无可用适配器 (支持: a_stock/hk/us)"
+            )
+
         # 1. 查缓存（按桶）
         bucket = self._ttl_calc.bucket_for("realtime_quote")
         cached = []
@@ -33,8 +46,10 @@ class QuoteService:
         if not missing:
             return cached
 
-        # 2. 走 registry（多源 fallback）
-        fresh = await self._registry.fan_out("get_realtime_quote", codes=missing)
+        # 2. 在子集内 fallback
+        fresh = await self._registry.fan_out_in_sublist(
+            sub, "get_realtime_quote", codes=missing
+        )
 
         # 3. 写缓存
         ttl = self._ttl_calc.ttl_seconds("realtime_quote")

@@ -14,7 +14,20 @@ class NewsService:
         self._cache = cache
         self._ttl_calc = ttl_calc
 
-    async def get_news(self, code: str, limit: int) -> list[NewsItem]:
+    async def get_news(
+        self, code: str, limit: int, market: str = "a_stock"
+    ) -> list[NewsItem]:
+        # 0. 选 market 子集
+        sub = [
+            a
+            for a in self._registry.adapters_in_order()
+            if a.enabled and market in a.supported_markets
+        ]
+        if not sub:
+            raise ValueError(
+                f"market={market} 无可用适配器 (支持: a_stock/hk/us)"
+            )
+
         bucket = self._ttl_calc.bucket_for("news")
         key = f"news:{code}:{limit}:{bucket}"
         cached = await self._cache.get(key)
@@ -22,7 +35,9 @@ class NewsService:
             data = json.loads(cached)
             return [NewsItem.model_validate(item) for item in data]
 
-        items = await self._registry.fan_out("get_news", code=code, limit=limit)
+        items = await self._registry.fan_out_in_sublist(
+            sub, "get_news", code=code, limit=limit
+        )
         ttl = self._ttl_calc.ttl_seconds("news")
         await self._cache.set(key, json.dumps([n.model_dump(mode="json") for n in items]), ttl=ttl)
         return items

@@ -74,3 +74,40 @@ class AdapterRegistry:
                 source=sources[0] if sources else "unknown",
             )
         raise DataSourceError("无可用适配器", source="registry")
+
+    async def fan_out_in_sublist(
+        self, adapters: list[BaseAdapter], method_name: str, *args, **kwargs
+    ) -> Any:
+        """在指定适配器子集内按优先级 fallback (跳过 unhealthy)
+
+        与 fan_out 的区别: 只在传入的子集内尝试, 不查 registry 全集.
+        用于 service 层做 market 路由: 只在支持当前 market 的适配器里选.
+        """
+        errors = []
+        for adapter in sorted(adapters, key=lambda a: a.priority):
+            if self.is_unhealthy(adapter.name):
+                continue
+            method = getattr(adapter, method_name)
+            try:
+                result = await method(*args, **kwargs)
+            except Exception as e:
+                errors.append((adapter.name, e))
+                continue
+
+            if isinstance(result, list) and len(result) == 0:
+                errors.append((adapter.name, "empty result"))
+                continue
+            if result is None:
+                errors.append((adapter.name, "None result"))
+                continue
+
+            self.mark_healthy(adapter.name)
+            return result
+
+        if errors:
+            sources = [n for n, _ in errors]
+            raise DataSourceError(
+                f"子集适配器失败: {', '.join(sources)}",
+                source=sources[0] if sources else "unknown",
+            )
+        raise DataSourceError("无可用适配器", source="registry")

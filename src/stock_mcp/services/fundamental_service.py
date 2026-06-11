@@ -12,13 +12,28 @@ class FundamentalService:
         self._cache = cache
         self._ttl_calc = ttl_calc
 
-    async def get_fundamental(self, code: str) -> Fundamental | None:
+    async def get_fundamental(
+        self, code: str, market: str = "a_stock"
+    ) -> Fundamental | None:
+        # 0. 选 market 子集
+        sub = [
+            a
+            for a in self._registry.adapters_in_order()
+            if a.enabled and market in a.supported_markets
+        ]
+        if not sub:
+            raise ValueError(
+                f"market={market} 无可用适配器 (支持: a_stock/hk/us)"
+            )
+
         key = f"fundamental:{code}"
         cached = await self._cache.get(key)
         if cached:
             return Fundamental.model_validate_json(cached)
 
-        result = await self._registry.fan_out("get_fundamental", code=code)
+        result = await self._registry.fan_out_in_sublist(
+            sub, "get_fundamental", code=code
+        )
         if result:
             ttl = self._ttl_calc.ttl_seconds("fundamental")
             await self._cache.set(key, result.model_dump_json(), ttl=ttl)
