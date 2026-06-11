@@ -170,7 +170,9 @@ class TqcenterAdapter(BaseAdapter):
         try:
             tq_period = self._PERIOD_MAP[period]
             tq_code = self._to_tq_code(code)
-            # get_market_data 返回 dict: {'open': [...], 'high': [...], 'low': [...], ...}
+            # tqcenter.get_market_data 返回 dict: {'Open': Series, 'High': Series, ...}
+            # 注意: 字段名是 **大写** (Open/High/Low/Close/Volume/Amount),
+            #       时间戳在 **DataFrame 的 index** 里, 不是字段
             data = self._tq.get_market_data(
                 stock_list=[tq_code],
                 period=tq_period,
@@ -180,45 +182,65 @@ class TqcenterAdapter(BaseAdapter):
             )
             if not data or "error" in data:
                 return []
-            # 解析 dict 成 List[Kline]
-            opens = data.get("open", [])
-            highs = data.get("high", [])
-            lows = data.get("low", [])
-            closes = data.get("close", [])
-            volumes = data.get("volume", [])
-            amounts = data.get("amount", [])
-            times = data.get("time", []) or data.get("datetime", [])
+            # 兼容大小写: tqcenter 返回大写, 但防御性兼容小写
+            def _col(d, *names):
+                for n in names:
+                    if n in d and len(d[n]) > 0:
+                        return d[n]
+                return None
+
+            opens_df = _col(data, "Open", "open")
+            highs_df = _col(data, "High", "high")
+            lows_df = _col(data, "Low", "low")
+            closes_df = _col(data, "Close", "close")
+            volumes_df = _col(data, "Volume", "volume")
+            amounts_df = _col(data, "Amount", "amount")
+            if opens_df is None or closes_df is None:
+                return []  # 没拉到核心字段, 当作空数据
+
+            # tqcenter 把每只股票作为 DataFrame 的一个 column
+            # 例如 data['Open'] 是 DataFrame, columns=['600519.SH'], index=DatetimeIndex
+            # 抽出我们要的这只股票的 Series
+            def _series_for_code(df):
+                if tq_code in df.columns:
+                    return df[tq_code]
+                # 兜底: 取第一列
+                return df.iloc[:, 0]
+
+            opens = _series_for_code(opens_df)
+            highs = _series_for_code(highs_df)
+            lows = _series_for_code(lows_df)
+            closes = _series_for_code(closes_df)
+            volumes = _series_for_code(volumes_df) if volumes_df is not None else None
+            amounts = _series_for_code(amounts_df) if amounts_df is not None else None
 
             n = min(len(opens), len(highs), len(lows), len(closes))
             klines = []
-            import datetime as _dt
             for i in range(n):
-                # time 字段是 'YYYYMMDD' 或 'YYYYMMDDHHMM' 字符串
-                t_str = str(times[i]) if i < len(times) else ""
+                # 时间从 Series 的 DatetimeIndex 拿
                 try:
-                    if len(t_str) >= 14:
-                        dt_obj = _dt.datetime(
-                            int(t_str[0:4]), int(t_str[4:6]), int(t_str[6:8]),
-                            int(t_str[8:10]) if len(t_str) >= 10 else 0,
-                            int(t_str[10:12]) if len(t_str) >= 12 else 0,
-                        )
-                    elif len(t_str) >= 8:
-                        dt_obj = _dt.datetime(int(t_str[0:4]), int(t_str[4:6]), int(t_str[6:8]))
-                    else:
-                        dt_obj = pd.Timestamp.now().to_pydatetime()
+                    dt_obj = pd.Timestamp(opens.index[i]).to_pydatetime()
                 except Exception:
                     dt_obj = pd.Timestamp.now().to_pydatetime()
+
+                def _scalar(series, idx, default=0):
+                    if series is None or idx >= len(series):
+                        return default
+                    try:
+                        return float(series.iloc[idx])
+                    except Exception:
+                        return default
 
                 klines.append(Kline(
                     code=code.split(".")[0],
                     period=period,
                     datetime=dt_obj,
-                    open=float(opens[i]),
-                    high=float(highs[i]),
-                    low=float(lows[i]),
-                    close=float(closes[i]),
-                    volume=int(float(volumes[i])) if i < len(volumes) else 0,
-                    amount=float(amounts[i]) if i < len(amounts) else 0.0,
+                    open=_scalar(opens, i),
+                    high=_scalar(highs, i),
+                    low=_scalar(lows, i),
+                    close=_scalar(closes, i),
+                    volume=int(_scalar(volumes, i)),
+                    amount=_scalar(amounts, i, 0.0),
                     source=self.name,
                 ))
             return klines
