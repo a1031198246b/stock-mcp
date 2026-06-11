@@ -71,6 +71,34 @@ tqcenter 库返回结构 (重要, 跟其他源不同):
 - **代码格式**: tqcenter 严格要求 `6位代码.市场后缀` (如 `600519.SH`), 我们的 `_to_tq_code` 自动补后缀.
 - **行业代码**: tqcenter 的 `J_hy` 是 TDX 内部数字, 不要硬编码猜测中文名. 上层可查公开的证监会行业分类做转换.
 
+## Linting and Type Checking
+
+The project uses ruff and mypy, configured in `pyproject.toml`.
+
+**Before committing**, run:
+
+```bash
+# Lint (matches CI lint job)
+uv run ruff check .
+
+# Format check (matches CI lint job)
+uv run ruff format --check .
+
+# Auto-fix lint and format
+uv run ruff check . --fix
+uv run ruff format .
+
+# Type check (matches CI typecheck job, currently non-blocking)
+uv run mypy src/stock_mcp
+```
+
+**CI will block** the merge if:
+- `ruff check` or `ruff format --check` fails
+- `pytest --cov-fail-under=90` fails (coverage below 90%)
+
+**CI will NOT block** for:
+- `mypy` errors (continue-on-error, plan is to fix incrementally)
+
 ## 编码规范
 
 - 公共方法必须有类型注解
