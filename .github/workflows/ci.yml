@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
+  schedule:
+    # 每周一早 02:00 UTC 跑集成测试 (北京 10:00, 避开 A 股开盘 + Yahoo 限流高峰)
+    - cron: "0 2 * * 1"
 
 # Force all GitHub Actions to use Node.js 24 instead of the deprecated
 # Node.js 20. Required before 2026-06-16 when Node 20 is removed.
@@ -64,3 +67,49 @@ jobs:
           cache-dependency-glob: uv.lock
       - run: uv sync --extra dev
       - run: uv run mypy src/stock_mcp
+
+  # 每周一早 02:00 UTC 跑集成测试 (真实网络), 验证 baostock/eastmoney/sina/tencent 端点还活着.
+  # 端点变更/库升级不兼容会**早一周发现** (我们 eastmoney 302 + pz 限制就是这种情况).
+  # **只在 schedule 和 manual 触发时跑** (不在 push/pull_request 时跑, 节省 5+ 分钟 CI 时间).
+  # continue-on-error: 网络偶发挂不应阻塞 PR, 失败发邮件/slack 由 repo owner 配置.
+  integration-tests-weekly:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Sync dev dependencies
+        run: uv sync --extra dev
+      - name: Run integration tests against real data sources
+        env:
+          # 启用 4 个真实数据源集成测试
+          RUN_BAOSTOCK_TESTS: "1"
+          RUN_EASTMONEY_TESTS: "1"
+          RUN_SINA_TESTS: "1"
+          RUN_TENCENT_TESTS: "1"
+          # yfinance 默认 skip (国内被限), 想海外跑可设 RUN_YFINANCE_TESTS=1
+          TDX_PATH: ""
+        run: |
+          uv run python -m pytest tests/integration/ \
+            -v --tb=short --maxfail=20 \
+            -p no:cacheprovider 2>&1 | tee integration-test.log
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-log
+          path: integration-test.log
+          retention-days: 30
+      - name: Summarize results
+        if: always()
+        run: |
+          echo "### Integration Tests Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f integration-test.log ]; then
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            grep -E "^(PASSED|FAILED|ERROR|tests/integration|=+ [0-9]+)" integration-test.log | tail -50 >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
