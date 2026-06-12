@@ -38,9 +38,9 @@ class AdapterRegistry:
             return False
         return True
 
-    async def fan_out(self, method_name: str, *args, **kwargs) -> Any:
+    async def fan_out(self, method_name: str, *args: Any, **kwargs: Any) -> Any:
         """按优先级依次调用方法，全部失败抛 DataSourceError"""
-        errors = []
+        errors: list[tuple[str, Exception | str]] = []
         for adapter in self.adapters_in_order():
             if self.is_unhealthy(adapter.name):
                 continue
@@ -76,14 +76,14 @@ class AdapterRegistry:
         raise DataSourceError("无可用适配器", source="registry")
 
     async def fan_out_in_sublist(
-        self, adapters: list[BaseAdapter], method_name: str, *args, **kwargs
+        self, adapters: list[BaseAdapter], method_name: str, *args: Any, **kwargs: Any
     ) -> Any:
         """在指定适配器子集内按优先级 fallback (跳过 unhealthy)
 
         与 fan_out 的区别: 只在传入的子集内尝试, 不查 registry 全集.
         用于 service 层做 market 路由: 只在支持当前 market 的适配器里选.
         """
-        errors = []
+        errors: list[tuple[str, Exception | str]] = []
         for adapter in sorted(adapters, key=lambda a: a.priority):
             if self.is_unhealthy(adapter.name):
                 continue

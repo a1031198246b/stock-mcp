@@ -15,6 +15,7 @@
 
 import asyncio
 from datetime import datetime
+from typing import Any
 
 import httpx
 import pandas as pd
@@ -66,7 +67,7 @@ def _to_tencent_code(code: str, market: Market) -> str:
     return f"sz{c}"
 
 
-async def _get_with_retry(url: str, referer: str, retries: int = 3) -> dict | str:
+async def _get_with_retry(url: str, referer: str, retries: int = 3) -> dict[str, Any] | str:
     """GET with retry, 返回 dict (json) 或 str (raw qt.gtimg.cn var=...)
 
     **注意**: 腾讯 content-type 是 text/html 但 body 是 JSON, 不用 content-type 判断.
@@ -80,7 +81,8 @@ async def _get_with_retry(url: str, referer: str, retries: int = 3) -> dict | st
                 resp.raise_for_status()
                 # 优先试 JSON 解析 (K线, qt 历史)
                 try:
-                    return resp.json()
+                    result: dict[str, Any] = resp.json()
+                    return result
                 except Exception:
                     # fallback 到 text (qt.gtimg.cn 实时 var=...)
                     return resp.text
@@ -97,7 +99,7 @@ class TencentAdapter(BaseAdapter):
     enabled = True
     supported_markets = ["a_stock", "hk", "us"]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -122,6 +124,8 @@ class TencentAdapter(BaseAdapter):
             raise DataSourceError(f"tencent 实时失败: {e}", source=self.name) from e
 
         results: list[Quote] = []
+        if not isinstance(text, str):
+            return results
         for line in text.splitlines():
             line = line.strip()
             if not line or "=" not in line:

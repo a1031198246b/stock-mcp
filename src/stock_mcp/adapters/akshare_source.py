@@ -1,5 +1,7 @@
 """AKShare 适配器 - 基本面、K线补全、资讯"""
 
+from typing import Any
+
 import pandas as pd
 
 from ..domain.errors import DataSourceError
@@ -7,9 +9,9 @@ from ..domain.models import Fundamental, Kline, NewsItem, Quote
 from .base import BaseAdapter
 
 try:
-    import akshare as ak
+    import akshare as ak  # type: ignore[import-untyped]
 except ImportError:
-    ak = None  # type: ignore
+    ak = None
 
 
 class AkshareAdapter(BaseAdapter):
@@ -88,7 +90,7 @@ class AkshareAdapter(BaseAdapter):
         return []
 
 
-def _safe_float(v) -> float | None:
+def _safe_float(v: Any) -> float | None:
     try:
         if v is None or (isinstance(v, float) and pd.isna(v)):
             return None

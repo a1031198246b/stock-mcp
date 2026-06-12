@@ -5,6 +5,7 @@ yfinance 强项: 全球市场 (美股/港股/欧股), 财经数据全
 """
 
 from datetime import datetime
+from typing import Any
 
 import pandas as pd
 
@@ -58,12 +59,12 @@ class YfinanceAdapter(BaseAdapter):
     enabled = False  # 默认禁用, 初始化成功才启用
     supported_markets = ["hk", "us"]
 
-    def __init__(self):
-        self._yf = None
+    def __init__(self) -> None:
+        self._yf: Any = None
 
     def initialize(self) -> None:
         try:
-            import yfinance as yf
+            import yfinance as yf  # type: ignore[import-untyped]
         except ImportError:
             return
         self._yf = yf

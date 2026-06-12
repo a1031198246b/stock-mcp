@@ -37,4 +37,6 @@ def setup_logging() -> None:
 
 
 def get_logger(name: str = "stock_mcp") -> structlog.stdlib.BoundLogger:
-    return structlog.get_logger(name).bind()
+    from typing import cast
+
+    return cast(structlog.stdlib.BoundLogger, structlog.get_logger(name).bind())

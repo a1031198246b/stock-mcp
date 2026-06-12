@@ -1,5 +1,7 @@
 """MCP Server 入口 - stdio 模式"""
 
+from pathlib import Path
+
 from fastmcp import FastMCP
 
 from .adapters.akshare_source import AkshareAdapter
@@ -29,7 +31,7 @@ def create_server() -> FastMCP:
     mcp = FastMCP("stock-mcp")
     settings = get_settings()
 
-    cache = SQLiteCache(settings.cache_db_path)
+    cache = SQLiteCache(settings.cache_db_path or Path("./.cache/stock-mcp.db"))
     ttl_calc = TTLCalculator()
 
     tq = TqcenterAdapter()

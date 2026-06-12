@@ -1,5 +1,7 @@
 """MCP Tools 注册中心"""
 
+from typing import Any
+
 from fastmcp import FastMCP
 
 from . import admin, financial_statement, fundamental, kline, news, query, quote
@@ -7,12 +9,12 @@ from . import admin, financial_statement, fundamental, kline, news, query, quote
 
 def register_all_tools(
     mcp: FastMCP,
-    quote_service=None,
-    kline_service=None,
-    fundamental_service=None,
-    news_service=None,
-    query_service=None,
-    baostock_adapter=None,
+    quote_service: Any = None,
+    kline_service: Any = None,
+    fundamental_service: Any = None,
+    news_service: Any = None,
+    query_service: Any = None,
+    baostock_adapter: Any = None,
 ) -> None:
     """注册所有 MCP tools"""
     admin.register(mcp)

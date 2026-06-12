@@ -1,5 +1,7 @@
 """K线服务"""
 
+from typing import cast
+
 from ..adapters.registry import AdapterRegistry
 from ..cache.sqlite_cache import SQLiteCache
 from ..cache.ttl import TTLCalculator
@@ -42,4 +44,4 @@ class KlineService:
         import json
 
         await self._cache.set(key, json.dumps([k.model_dump(mode="json") for k in klines]), ttl=ttl)
-        return klines
+        return cast(list[Kline], klines)

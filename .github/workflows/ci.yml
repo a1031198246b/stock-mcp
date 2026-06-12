@@ -58,7 +58,7 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    # mypy strict 模式 0 errors (2026-06-12 修完), 取消 continue-on-error
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3

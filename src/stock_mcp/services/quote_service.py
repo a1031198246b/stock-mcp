@@ -1,5 +1,7 @@
 """行情服务 - 编排缓存 + 多源 fallback"""
 
+from typing import cast
+
 from ..adapters.registry import AdapterRegistry
 from ..cache.sqlite_cache import SQLiteCache
 from ..cache.ttl import TTLCalculator
@@ -53,4 +55,4 @@ class QuoteService:
             key = f"quote:{q.code}:{bucket}"
             await self._cache.set(key, q.model_dump_json(), ttl=ttl)
 
-        return cached + fresh
+        return cast(list[Quote], cached + fresh)

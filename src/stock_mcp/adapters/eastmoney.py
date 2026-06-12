@@ -15,6 +15,7 @@ A 股: 资讯 (np-anotice-stock)
 
 import asyncio
 from datetime import datetime
+from typing import Any
 
 import httpx
 import pandas as pd
@@ -67,7 +68,9 @@ _MAX_RETRIES = 3
 _RETRY_BACKOFF = 1.5  # 秒
 
 
-async def _get_with_retry(client: httpx.AsyncClient, url: str, headers: dict[str, str]) -> dict:
+async def _get_with_retry(
+    client: httpx.AsyncClient, url: str, headers: dict[str, str]
+) -> dict[str, Any]:
     """GET with 3 次重试 + 指数退避. eastmoney 端 502 偶发.
 
     **注意**: eastmoney 经常 302 redirect 到 push2delay.eastmoney.com (延迟行情),
@@ -78,7 +81,8 @@ async def _get_with_retry(client: httpx.AsyncClient, url: str, headers: dict[str
         try:
             resp = await client.get(url, headers=headers, follow_redirects=True)
             resp.raise_for_status()
-            return resp.json()
+            result: dict[str, Any] = resp.json()
+            return result
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
             last_exc = e
             if attempt < _MAX_RETRIES - 1:
@@ -227,7 +231,10 @@ class EastmoneyAdapter(BaseAdapter):
         # 收集有效 Quote, 如果有 DataSourceError 抛出第一个
         quotes: list[Quote] = []
         for r in results:
-            if isinstance(r, DataSourceError):
+            if isinstance(r, BaseException):
+                if isinstance(r, DataSourceError):
+                    raise r
+                # 其他异常也 raise
                 raise r
             if r is not None:
                 quotes.append(r)

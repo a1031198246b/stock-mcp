@@ -17,7 +17,7 @@ class SQLiteCache:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialized = False
 
-    async def _ensure_schema(self):
+    async def _ensure_schema(self) -> None:
         if self._initialized:
             return
         async with aiosqlite.connect(self._db_path) as db:
@@ -47,7 +47,7 @@ class SQLiteCache:
                     await db.execute("DELETE FROM cache WHERE key = ?", (key,))
                     await db.commit()
                     return None
-                return value
+                return str(value)
         except Exception as e:
             log.warning("cache_get_failed", key=key, error=str(e))
             return None

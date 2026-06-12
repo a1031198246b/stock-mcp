@@ -14,7 +14,7 @@ import httpx
 import pandas as pd
 
 from ..domain.errors import DataSourceError, ParseError
-from ..domain.models import Quote
+from ..domain.models import Fundamental, Kline, NewsItem, Quote
 from .base import BaseAdapter
 
 # 腾讯财经 K线 API (港美股 + A 股, 跟 sina 互补)
@@ -147,7 +147,7 @@ class SinaAdapter(BaseAdapter):
 
     BASE_URL = "https://hq.sinajs.cn"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -180,12 +180,14 @@ class SinaAdapter(BaseAdapter):
             results.append(q)
         return results
 
-    async def get_kline(self, code, period, count, market: str = "a_stock"):
+    async def get_kline(
+        self, code: str, period: str, count: int, market: str = "a_stock"
+    ) -> list[Kline]:
         # 港美股 K线 JSON 不支持 (走 eastmoney 兜底)
         return []
 
-    async def get_fundamental(self, code, market: str = "a_stock"):
+    async def get_fundamental(self, code: str, market: str = "a_stock") -> Fundamental | None:
         return None
 
-    async def get_news(self, code, limit, market: str = "a_stock"):
+    async def get_news(self, code: str, limit: int, market: str = "a_stock") -> list[NewsItem]:
         return []

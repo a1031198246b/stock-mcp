@@ -6,6 +6,7 @@
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -20,10 +21,10 @@ class TqcenterAdapter(BaseAdapter):
     priority = 1  # 最高优先级
     enabled = False  # 默认禁用, 初始化成功才启用
 
-    def __init__(self):
-        self._tq = None
+    def __init__(self) -> None:
+        self._tq: Any = None
         self._initialized = False
-        self._stock_info_cache: dict = {}
+        self._stock_info_cache: dict[str, dict[str, Any]] = {}
 
     def initialize(self) -> None:
         """同步初始化 - 必须在异步方法调用前完成"""
@@ -40,7 +41,7 @@ class TqcenterAdapter(BaseAdapter):
         if tq_path.exists():
             sys.path.insert(0, str(tq_path))
         try:
-            import tqcenter
+            import tqcenter  # type: ignore[import-not-found]
         except Exception:
             return
 
@@ -191,7 +192,7 @@ class TqcenterAdapter(BaseAdapter):
                 return []
 
             # 兼容大小写: tqcenter 返回大写, 但防御性兼容小写
-            def _col(d, *names):
+            def _col(d: dict[str, Any], *names: str) -> pd.DataFrame | None:
                 for n in names:
                     if n in d and len(d[n]) > 0:
                         return d[n]
@@ -209,7 +210,7 @@ class TqcenterAdapter(BaseAdapter):
             # tqcenter 把每只股票作为 DataFrame 的一个 column
             # 例如 data['Open'] 是 DataFrame, columns=['600519.SH'], index=DatetimeIndex
             # 抽出我们要的这只股票的 Series
-            def _series_for_code(df):
+            def _series_for_code(df: pd.DataFrame) -> pd.Series:
                 if tq_code in df.columns:
                     return df[tq_code]
                 # 兜底: 取第一列
@@ -231,7 +232,7 @@ class TqcenterAdapter(BaseAdapter):
                 except Exception:
                     dt_obj = pd.Timestamp.now().to_pydatetime()
 
-                def _scalar(series, idx, default=0):
+                def _scalar(series: Any, idx: int, default: float = 0) -> float:
                     if series is None or idx >= len(series):
                         return default
                     try:
@@ -283,7 +284,7 @@ class TqcenterAdapter(BaseAdapter):
             return None
 
         # tqcenter 字段名是大写; 全部可能是字符串, 用 _f 安全转 float
-        def _f(d, key, default=0.0):
+        def _f(d: dict[str, Any], key: str, default: float = 0.0) -> float:
             v = d.get(key, default)
             try:
                 return float(v)
@@ -346,19 +347,21 @@ class TqcenterAdapter(BaseAdapter):
         """P1 阶段先返回空"""
         return []
 
-    def _safe_stock_info(self, code: str) -> dict:
+    def _safe_stock_info(self, code: str) -> dict[str, Any]:
+        from typing import cast
+
         try:
             info = self._tq.get_stock_info(code)
             if info and info.get("ErrorId") == "0":
                 self._stock_info_cache[code] = info
-                return info
+                return cast(dict[str, Any], info)
         except Exception:
             pass
         return {}
 
     @staticmethod
-    def _safe_int_list(v, n: int) -> list[int]:
-        out = []
+    def _safe_int_list(v: Any, n: int) -> list[int]:
+        out: list[int] = []
         for i in range(n):
             try:
                 out.append(int(float(v[i])) if i < len(v) and v[i] else 0)

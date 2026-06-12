@@ -68,13 +68,13 @@ class BaostockAdapter(BaseAdapter):
     enabled = False  # 默认禁用, 初始化成功才启用
     supported_markets = ["a_stock"]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._bs = None
         self._logged_in = False
 
     def initialize(self) -> None:
         try:
-            import baostock as bs
+            import baostock as bs  # type: ignore[import-untyped]
         except ImportError:
             return
         self._bs = bs
@@ -103,6 +103,8 @@ class BaostockAdapter(BaseAdapter):
         self, code: str, period: str, count: int, market: Market = "a_stock"
     ) -> list[Kline]:
         self._login()
+        assert self._bs is not None
+        bs = self._bs
         # baostock period: d/w/m/5/15/30/60
         period_map = {
             "1d": "d",
@@ -119,7 +121,7 @@ class BaostockAdapter(BaseAdapter):
 
         end_date = datetime.now().strftime("%Y-%m-%d")
         try:
-            rs = self._bs.query_history_k_data_plus(
+            rs = bs.query_history_k_data_plus(
                 code=_to_bs_code(code),
                 fields="date,open,high,low,close,volume,amount",
                 start_date="",
@@ -171,6 +173,8 @@ class BaostockAdapter(BaseAdapter):
         adapter 自动循环最近 4 个 quarter 直到拿到非空结果 (季报有 1-2 月延迟).
         """
         self._login()
+        assert self._bs is not None
+        bs = self._bs
         # 找能拿到数据的最近 quarter
         now = datetime.now()
         # baostock 用 1-4 表示 Q1-Q4
@@ -189,13 +193,11 @@ class BaostockAdapter(BaseAdapter):
         used_period = ""
         for year, quarter in quarters_to_try:
             if statement_type == "income":
-                rs = self._bs.query_profit_data(code=_to_bs_code(code), year=year, quarter=quarter)
+                rs = bs.query_profit_data(code=_to_bs_code(code), year=year, quarter=quarter)
             elif statement_type == "balance":
-                rs = self._bs.query_balance_data(code=_to_bs_code(code), year=year, quarter=quarter)
+                rs = bs.query_balance_data(code=_to_bs_code(code), year=year, quarter=quarter)
             elif statement_type == "cashflow":
-                rs = self._bs.query_cash_flow_data(
-                    code=_to_bs_code(code), year=year, quarter=quarter
-                )
+                rs = bs.query_cash_flow_data(code=_to_bs_code(code), year=year, quarter=quarter)
             else:
                 raise ValueError(
                     f"statement_type 必须是 income/balance/cashflow, 得到 {statement_type}"

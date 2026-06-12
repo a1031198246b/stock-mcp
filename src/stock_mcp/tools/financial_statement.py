@@ -1,11 +1,15 @@
 """财务三表 MCP 工具 (仅 baostock 实现)"""
 
+from typing import cast
+
 from fastmcp import FastMCP
 
+from ..adapters.baostock_source import BaostockAdapter
 from ..domain.errors import DataSourceError
+from ..domain.models import Market
 
 
-def register(mcp: FastMCP, baostock_adapter) -> None:
+def register(mcp: FastMCP, baostock_adapter: BaostockAdapter | None) -> None:
     """baostock_adapter 是 BaostockAdapter 实例"""
 
     @mcp.tool()
@@ -26,7 +30,7 @@ def register(mcp: FastMCP, baostock_adapter) -> None:
 
         try:
             stmt = await baostock_adapter.get_financial_statement(
-                code, statement_type, market=market
+                code, statement_type, market=cast(Market, market)
             )
         except ValueError as e:
             return f"❌ 参数错: {e}"

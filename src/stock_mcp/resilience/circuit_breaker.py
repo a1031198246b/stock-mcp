@@ -4,7 +4,7 @@ import asyncio
 import time
 from collections.abc import Awaitable, Callable
 from enum import StrEnum
-from typing import TypeVar
+from typing import TypeVar, cast
 
 from ..domain.errors import DataSourceError
 
@@ -49,13 +49,13 @@ class CircuitBreaker:
             if asyncio.iscoroutine(ret) or isinstance(ret, asyncio.Future):
                 result = await ret
             else:
-                result = ret  # type: ignore[assignment]
+                result = ret
         except Exception:
             await self.record_failure()
             raise
 
         await self.record_success()
-        return result
+        return cast(T, result)
 
     async def record_failure(self) -> None:
         self._failure_count += 1

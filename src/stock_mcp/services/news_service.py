@@ -1,6 +1,7 @@
 """资讯服务"""
 
 import json
+from typing import cast
 
 from ..adapters.registry import AdapterRegistry
 from ..cache.sqlite_cache import SQLiteCache
@@ -36,4 +37,4 @@ class NewsService:
         )
         ttl = self._ttl_calc.ttl_seconds("news")
         await self._cache.set(key, json.dumps([n.model_dump(mode="json") for n in items]), ttl=ttl)
-        return items
+        return cast(list[NewsItem], items)
