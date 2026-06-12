@@ -7,6 +7,16 @@ from stock_mcp.adapters.sina import SinaAdapter
 from stock_mcp.adapters.tqcenter import TqcenterAdapter
 
 
-def test_default_supported_markets_is_a_stock():
-    for cls in [TqcenterAdapter, SinaAdapter, AkshareAdapter, EastmoneyAdapter, IwencaiAdapter]:
-        assert cls.supported_markets == ["a_stock"], f"{cls.__name__} should default to a_stock"
+def test_default_supported_markets():
+    """每个适配器必须包含 'a_stock' (基础), 但可以多市场支持"""
+    expected = {
+        TqcenterAdapter: ["a_stock"],
+        SinaAdapter: ["a_stock"],
+        AkshareAdapter: ["a_stock"],
+        EastmoneyAdapter: ["a_stock", "hk", "us"],  # 港美股 2026-06-12 起
+        IwencaiAdapter: ["a_stock"],
+    }
+    for cls, markets in expected.items():
+        assert cls.supported_markets == markets, (
+            f"{cls.__name__}: {cls.supported_markets} != {markets}"
+        )
