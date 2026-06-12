@@ -68,11 +68,15 @@ _RETRY_BACKOFF = 1.5  # 秒
 
 
 async def _get_with_retry(client: httpx.AsyncClient, url: str, headers: dict[str, str]) -> dict:
-    """GET with 3 次重试 + 指数退避. eastmoney 端 502 偶发."""
+    """GET with 3 次重试 + 指数退避. eastmoney 端 502 偶发.
+
+    **注意**: eastmoney 经常 302 redirect 到 push2delay.eastmoney.com (延迟行情),
+    必须 follow_redirects=True 否则拿不到数据.
+    """
     last_exc: Exception | None = None
     for attempt in range(_MAX_RETRIES):
         try:
-            resp = await client.get(url, headers=headers)
+            resp = await client.get(url, headers=headers, follow_redirects=True)
             resp.raise_for_status()
             return resp.json()
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
@@ -148,77 +152,85 @@ class EastmoneyAdapter(BaseAdapter):
 
     # ---- 港美股: 实时 + K线 ----
     async def get_realtime_quote(self, codes: list[str], market: Market = "hk") -> list[Quote]:
-        """港美股实时. 一次性拿全市场按代码过滤.
+        """港美股实时. **逐股并发查 secid** (push2delay pz 最大 100, 拉全市场行不通).
 
-        端点返回结构 (验证 2026-06-12):
-        {
-          "data": {
-            "diff": [
-              {"f2": 92.65, "f3": -5.65, "f5": 116800, "f6": 10912160.0,
-               "f12": "89988", "f14": "阿里巴巴-WR"},  # 港股
-              {"f2": 311.23, "f3": -5.0, "f5": 12345, "f12": "AAPL",
-               "f14": "苹果"},  # 美股
-            ]
-          }
-        }
+        端点: push2.eastmoney.com/api/qt/stock/get?secid={secid}
+        - 港股: secid=116.{code}  (e.g. 116.00700)
+        - 美股: secid=105.{code}  (NASDAQ, e.g. 105.AAPL)
 
-        字段: f2=现价, f3=涨跌幅%, f4=涨跌额, f5=成交量, f6=成交额,
-              f12=代码, f14=名称
+        字段 (验证 2026-06-12):
+        - f43=high, f44=open, f45=low, f46=last_close (价格 ×100, 港股 3 位小数, 美股 2 位)
+        - f47=volume, f48=amount, f60=now (价格 ×100)
+        - f169=change (价格 ×100), f170=change_pct (×100, e.g. 1.39% = 139), f171=turnover
+
+        性能: N 只股票用 asyncio.gather 并发, 单次连接复用.
         """
         if market not in ("hk", "us"):
             return []  # A 股走别的源
-        fs = _FS_PARAMS.get(market)
-        if not fs:
-            return []
-        url = (
-            f"{_PUSH2_URL}?pn=1&pz=200&po=1&np=1&fltt=2&invt=2&fid=f12"
-            f"&fs={fs}&fields=f2,f3,f4,f5,f6,f12,f14"
-        )
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                data = await _get_with_retry(
-                    client, url, {"Referer": "https://quote.eastmoney.com/"}
-                )
-        except DataSourceError:
-            raise
-        except Exception as e:
-            raise DataSourceError(f"eastmoney 实时失败: {e}", source=self.name) from e
+        secid_prefix = _SECID_PREFIX["hk"] if market == "hk" else _us_secid_prefix("dummy")
+        # fields 一次拿全
+        fields = "f43,f44,f45,f46,f47,f48,f60,f169,f170,f171"
 
-        diff = (data.get("data") or {}).get("diff") or []
-        code_set = {c.upper() for c in codes}
-        quotes: list[Quote] = []
-        for row in diff:
-            row_code = str(row.get("f12", "")).upper()
-            if row_code not in code_set:
-                continue
+        async def _fetch_one(client: httpx.AsyncClient, code: str) -> Quote | None:
+            secid = f"{secid_prefix}.{code}"
+            url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields={fields}"
+            # DataSourceError 让它 propagate, 由 gather + 上层处理
+            # (只有"网络通但单只股票没数据"才 return None, 整端挂要 raise)
+            data = await _get_with_retry(client, url, {"Referer": "https://quote.eastmoney.com/"})
+            d = data.get("data") or {}
+            if not d or not d.get("f60"):
+                return None  # 无数据 (停牌/不存在)
             try:
-                price = float(row.get("f2") or 0)
-                change_pct = float(row.get("f3") or 0)
-                volume = int(float(row.get("f5") or 0))
-                amount = float(row.get("f6") or 0)
-                if price <= 0:
-                    continue
-                quotes.append(
-                    Quote(
-                        code=row_code,
-                        name=str(row.get("f14", row_code)),
-                        price=round(price, 4),
-                        change_pct=round(change_pct, 2),
-                        amount=amount,
-                        volume=volume,
-                        open=0.0,
-                        high=0.0,
-                        low=0.0,
-                        last_close=0.0,
-                        bid_5=[0] * 5,
-                        ask_5=[0] * 5,
-                        timestamp=datetime.now(),
-                        source=self.name,
-                        market=market,
-                    )
+                # 价格精度: 港股 3 位小数 (457.200) → f60=457200 (6 位) ÷1000
+                #          美股 2 位小数 (295.63)  → f60=29563 (5 位) ÷100
+                # 启发: f60 >= 100000 (6 位) 用 ÷1000, 否则 ÷100
+                now_raw = float(d.get("f60") or 0)
+                if now_raw <= 0:
+                    return None
+                divisor = 1000.0 if now_raw >= 100000 else 100.0
+                now = now_raw / divisor
+                chg_pct = float(d.get("f170") or 0) / 100.0  # eastmoney 涨跌幅 ×100
+                high = float(d.get("f43") or 0) / divisor
+                o = float(d.get("f44") or 0) / divisor
+                low = float(d.get("f45") or 0) / divisor
+                last_close = float(d.get("f46") or 0) / divisor
+                volume = int(float(d.get("f47") or 0))
+                amount = float(d.get("f48") or 0)
+                return Quote(
+                    code=code.upper(),
+                    name=code,  # 单股查询不返回 name, 用 code 占位
+                    price=round(now, 4),
+                    change_pct=round(chg_pct, 2),
+                    amount=amount,
+                    volume=volume,
+                    open=round(o, 4),
+                    high=round(high, 4),
+                    low=round(low, 4),
+                    last_close=round(last_close, 4),
+                    bid_5=[0] * 5,
+                    ask_5=[0] * 5,
+                    timestamp=datetime.now(),
+                    source=self.name,
+                    market=market,
                 )
             except (ValueError, TypeError):
-                continue
+                return None
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                results = await asyncio.gather(
+                    *[_fetch_one(client, c) for c in codes],
+                    return_exceptions=True,
+                )
+        except Exception as e:
+            raise DataSourceError(f"eastmoney 实时失败: {e}", source=self.name) from e
+        # 收集有效 Quote, 如果有 DataSourceError 抛出第一个
+        quotes: list[Quote] = []
+        for r in results:
+            if isinstance(r, DataSourceError):
+                raise r
+            if r is not None:
+                quotes.append(r)
         return quotes
 
     async def get_kline(
