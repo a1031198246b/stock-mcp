@@ -43,3 +43,40 @@
 - 5 适配器全部实现 (tqcenter / sina / akshare / eastmoney / iwencai)
 - 缓存 / 限流 / 熔断器 / 多源 fallback 完整
 - 集成测试 fixture 已支持 TDX 重试 3 次
+
+## 2026-06-12
+
+### 修复
+- **eastmoney 港美股实时** (`eastmoney.py:get_realtime_quote`): 改用单股 secid 查询 (`/api/qt/stock/get?secid=116.00700`) 替代 clist 全市场拉取 (push2delay 302 重定向后 pz 最大 100, 腾讯 00700 排序靠后被截). 字段 f60 启发式: f60 >= 100000 用 ÷1000 (港股 3 位小数), 否则 ÷100 (美股 2 位).
+- **eastmoney 302 redirect**: `_get_with_retry` 加 `follow_redirects=True` (push2 → push2delay).
+- **sina 美股字段**: 用 sina 给的 change_pct (fields[2]) 不自己算, 避免盘前字段错位.
+
+### 调整
+- **adapter priority 重新分配** (2026-06-12):
+  - tqcenter: 1 (不变)
+  - eastmoney: 4 → **2** (港美股字段稳, 优先 sina)
+  - baostock: 2 → 3
+  - akshare: 3 → 4
+  - sina: 2 → **5** (A 股 32 字段五档实时首选, 港美股实时兜底)
+  - tencent: 5 → 6
+  - yfinance: 5 → 7 (国内被限, 明确海外 fallback)
+  - iwencai: 0 (不变, 独立)
+- 新路由:
+  - 港美股实时: eastmoney(2) → sina(5) → yfinance(7)
+  - A 股实时: tqcenter(1) → sina(5) [五档] → tencent(6) (eastmoney A 股返回 [])
+  - A 股 K线: tqcenter(1) → baostock(3) → akshare(4) → tencent(6) (eastmoney A 股 K线返回 [])
+
+### 新增
+- **4 个 service 层单测** (`test_routing_priority.py`): 验证 priority 排序生效
+  - 港美股实时 → eastmoney 优先
+  - A 股实时 → sina 优先 (五档)
+  - eastmoney 失败 fallback sina
+  - 真实 adapter priority 字段符合设计
+
+### 文档
+- **DEVELOPING.md**: 适配器表从 7 个扩展到 8 个, 加 priority 设计原则章节
+- **DATA_SOURCES.md**: 全部重写, 反映 8 适配器 + 新 priority 路由
+
+### 测试
+- 227 passed, 29 skipped, 90% 覆盖率 (CI gate 过)
+- 集成测: `RUN_EASTMONEY_TESTS=1` 4/4 PASS (港美股实时 + K线, 之前默认 skip)

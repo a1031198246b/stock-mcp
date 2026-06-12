@@ -95,7 +95,7 @@ def _us_secid_prefix(code: str) -> str:
 
 class EastmoneyAdapter(BaseAdapter):
     name = "eastmoney"
-    priority = 4
+    priority = 2  # 港美股字段稳 (单股 secid, 不会盘前盘后错位), 优先于 sina(5)
     enabled = True
     supported_markets = ["a_stock", "hk", "us"]
 

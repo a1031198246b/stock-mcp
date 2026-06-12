@@ -282,7 +282,7 @@ def test_adapter_name_and_priority():
     """name/priority 应当固定"""
     a = AkshareAdapter()
     assert a.name == "akshare"
-    assert a.priority == 3
+    assert a.priority == 4  # 2026-06-12 priority 重分配
 
 
 def test_safe_float_normal_values():

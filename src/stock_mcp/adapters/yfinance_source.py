@@ -54,7 +54,7 @@ def _format_yf_code(code: str, market: str) -> str:
 
 class YfinanceAdapter(BaseAdapter):
     name = "yfinance"
-    priority = 5  # 最低 (15min 延迟)
+    priority = 7  # 最低 (15min 延迟, 国内被限, 仅海外/有代理兜底)
     enabled = False  # 默认禁用, 初始化成功才启用
     supported_markets = ["hk", "us"]
 

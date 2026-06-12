@@ -141,7 +141,7 @@ def _parse_sina_line(line: str) -> Quote | None:
 
 class SinaAdapter(BaseAdapter):
     name = "sina"
-    priority = 2
+    priority = 5  # A 股 32 字段含五档 (A 股实时首选), 港美股实时兜底 (eastmoney 字段更稳)
     enabled = True
     supported_markets = ["a_stock", "hk", "us"]
 

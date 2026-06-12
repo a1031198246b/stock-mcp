@@ -63,17 +63,31 @@ class MyAdapter(BaseAdapter):
 4. 在 `src/stock_mcp/server.py` 的 `create_server()` 中注册
 5. 添加单元测试 (用 `respx` mock HTTP, 或 `unittest.mock` mock 模块)
 
-### 当前 7 个适配器
+### 当前 8 个适配器 (priority 数字小优先)
 
 | 适配器 | priority | supported_markets | 覆盖 |
 |---|---|---|---|
 | tqcenter | 1 | a_stock | 行情 + K线 + 基本面 |
-| baostock | 2 | a_stock | K线 + 财务三表 |
-| sina | 2 | a_stock | 行情 |
-| akshare | 3 | a_stock | 行情 + K线 + 基本面 + 资讯 |
-| eastmoney | 4 | a_stock | 资讯 |
-| iwencai | 0 | a_stock | 自然语言选股 |
-| yfinance | 5 | hk, us | 港美股行情 + K线 + 基本面 |
+| eastmoney | 2 | a_stock, hk, us | A 股资讯 + 港美股实时/K线 (字段稳, 优先) |
+| baostock | 3 | a_stock | K线 + 财务三表 |
+| akshare | 4 | a_stock | 行情 + K线 + 基本面 + 资讯 |
+| sina | 5 | a_stock, hk, us | A 股 32 字段含五档 (A 股首选), 港美股实时兜底 |
+| tencent | 6 | a_stock, hk, us | A 股实时 + 港美股 K线 |
+| yfinance | 7 | hk, us | 海外 fallback (国内被限) |
+| iwencai | 0 | a_stock | 自然语言选股 (独立, 不参与 fallback) |
+
+### priority 设计原则 (2026-06-12)
+
+**港美股路由**: `eastmoney(2) → sina(5) → yfinance(7)`
+- eastmoney 优先: 单股 secid 查询, 字段 `f43/f44/f45/f46/f60/f170` 固定, **不会盘前盘后错位**
+- sina 兜底: 同端, 32/18/30 字段盘中 OK, 盘前盘后字段错位 (sina 上游限制)
+- yfinance 兜底: 国内被限 (push2delay 403), 仅海外/住宅代理可用
+
+**A 股路由**:
+- 行情: `tqcenter(1) → sina(5) [32 字段五档] → tencent(6) → eastmoney(2)` (eastmoney A 股返回 [], 实际 sina 兜底)
+- K线: `tqcenter(1) → baostock(3) → akshare(4) → tencent(6) → eastmoney(2)` (eastmoney A 股 K线返回 [])
+- 资讯: `eastmoney(2) → akshare(4)` (eastmoney 优先, 因为 ann_type=A 端稳)
+- 财务: `baostock(3)` (唯一源)
 
 ### tqcenter 适配器要点
 

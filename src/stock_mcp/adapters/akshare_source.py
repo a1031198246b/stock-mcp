@@ -14,7 +14,7 @@ except ImportError:
 
 class AkshareAdapter(BaseAdapter):
     name = "akshare"
-    priority = 3
+    priority = 4
     enabled = ak is not None
 
     async def get_realtime_quote(self, codes: list[str], market: str = "a_stock") -> list[Quote]:

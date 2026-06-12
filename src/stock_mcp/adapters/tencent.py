@@ -93,7 +93,7 @@ async def _get_with_retry(url: str, referer: str, retries: int = 3) -> dict | st
 
 class TencentAdapter(BaseAdapter):
     name = "tencent"
-    priority = 5  # eastmoney (4) 之后的兜底
+    priority = 6  # yfinance(7) 之前的兜底, K线 fallback
     enabled = True
     supported_markets = ["a_stock", "hk", "us"]
 

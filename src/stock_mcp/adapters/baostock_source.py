@@ -64,7 +64,7 @@ def _check_error(result: Any, op: str, source: str) -> None:
 
 class BaostockAdapter(BaseAdapter):
     name = "baostock"
-    priority = 2  # 同 sina
+    priority = 3  # A 股 K线 + 财务; eastmoney(2) 之后
     enabled = False  # 默认禁用, 初始化成功才启用
     supported_markets = ["a_stock"]
 
