@@ -29,6 +29,9 @@ class SQLiteCache:
                 )
             """)
             await db.execute("CREATE INDEX IF NOT EXISTS idx_expire ON cache(expire_at)")
+            # **2026-06-12**: 启动时主动清理过期项 (防止历史堆积)
+            # 之前只 lazy delete (get 时命中过期才删), 不查的 key 永远不删
+            await db.execute("DELETE FROM cache WHERE expire_at < ?", (time.time(),))
             await db.commit()
         self._initialized = True
 

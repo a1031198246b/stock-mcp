@@ -46,7 +46,8 @@ def ttl_calc():
 
 
 @pytest.mark.asyncio
-async def test_get_news_caches(sqlite_cache, ttl_calc):
+async def test_get_news_does_not_cache(sqlite_cache, ttl_calc):
+    """**2026-06-12**: news 不再 cache, 每次直接调 adapter"""
     news = [
         NewsItem(
             code="600519",
@@ -63,4 +64,5 @@ async def test_get_news_caches(sqlite_cache, ttl_calc):
     r2 = await svc.get_news("600519", limit=10)
     assert len(r1) == 1
     assert len(r2) == 1
-    assert adapter.call_count == 1
+    # 不 cache 意味着每次都调 adapter
+    assert adapter.call_count == 2

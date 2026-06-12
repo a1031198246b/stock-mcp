@@ -1,11 +1,13 @@
-"""资讯服务"""
+"""资讯服务 - 不 cache
 
-import json
+**2026-06-12 简化**: news 不 cache. 资讯用户不反复查, 10 分钟 TTL 命中率低.
+"""
+
 from typing import cast
 
 from ..adapters.registry import AdapterRegistry
-from ..cache.sqlite_cache import SQLiteCache
-from ..cache.ttl import TTLCalculator
+from ..cache.sqlite_cache import SQLiteCache  # 保留依赖
+from ..cache.ttl import TTLCalculator  # 保留依赖
 from ..domain.models import NewsItem
 
 
@@ -25,16 +27,9 @@ class NewsService:
         if not sub:
             raise ValueError(f"market={market} 无可用适配器 (支持: a_stock/hk/us)")
 
-        bucket = self._ttl_calc.bucket_for("news")
-        key = f"news:{code}:{limit}:{bucket}"
-        cached = await self._cache.get(key)
-        if cached:
-            data = json.loads(cached)
-            return [NewsItem.model_validate(item) for item in data]
-
-        items = await self._registry.fan_out_in_sublist(
-            sub, "get_news", code=code, limit=limit, market=market
+        return cast(
+            list[NewsItem],
+            await self._registry.fan_out_in_sublist(
+                sub, "get_news", code=code, limit=limit, market=market
+            ),
         )
-        ttl = self._ttl_calc.ttl_seconds("news")
-        await self._cache.set(key, json.dumps([n.model_dump(mode="json") for n in items]), ttl=ttl)
-        return cast(list[NewsItem], items)

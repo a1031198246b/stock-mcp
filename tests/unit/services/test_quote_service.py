@@ -77,13 +77,15 @@ async def test_get_quote_hits_adapter_first_time(sqlite_cache, ttl_calc):
 
 
 @pytest.mark.asyncio
-async def test_get_quote_caches_result(sqlite_cache, ttl_calc):
+async def test_get_quote_does_not_cache(sqlite_cache, ttl_calc):
+    """**2026-06-12**: realtime_quote 不再 cache, 每次直接调 adapter"""
     q = make_quote("600519", "tqcenter")
     adapter = FakeAdapter("tqcenter", [q])
     svc = QuoteService(AdapterRegistry([adapter]), sqlite_cache, ttl_calc)
     await svc.get_realtime_quote(["600519"])
     await svc.get_realtime_quote(["600519"])
-    assert adapter.call_count == 1
+    # 不 cache 意味着每次都调 adapter
+    assert adapter.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -106,6 +108,8 @@ async def test_get_quote_fallback_when_primary_fails(sqlite_cache, ttl_calc):
 @pytest.mark.asyncio
 async def test_a_stock_routes_to_a_stock_adapters_only(temp_cache_dir):
     """a_stock 路由只调 a_stock 适配器, 不调 yfinance"""
+    import respx
+
     from stock_mcp.adapters.registry import AdapterRegistry
     from stock_mcp.adapters.sina import SinaAdapter
     from stock_mcp.adapters.yfinance_source import YfinanceAdapter
@@ -126,9 +130,13 @@ async def test_a_stock_routes_to_a_stock_adapters_only(temp_cache_dir):
     registry = AdapterRegistry([sina, yf])
     svc = QuoteService(registry, cache, ttl)
 
-    # 调 a_stock: 触发 sina, 不触发 yfinance
-    quotes = await svc.get_realtime_quote(["600519"], market="a_stock")
-    # Sina 真调用会尝试 HTTP, 用 mock
+    # **2026-06-12 修复**: 加 respx mock, 不依赖真实网络 (sina 端可能抖)
+    with respx.mock() as router:
+        router.get(url__regex=r"hq\.sinajs\.cn.*").respond(
+            200,
+            text='var hq_str_sh600519="贵州茅台,1279.000,1275.880,1272.120,1282.000,1266.910,1279.000,1279.500,15000100,2250507500,100000,50000,60000,30000,20000,10000,200000,50000,100000,80000,40000,30000,20000,10000,1500.000,1501.000,1502.000,1503.000,1504.000,1505.000,1505.000,1506.000,1507.000,1508.000,1509.000,2026-06-10,10:00:00,00";',
+        )
+        quotes = await svc.get_realtime_quote(["600519"], market="a_stock")
     assert all(q.market == "a_stock" for q in quotes)
 
 
