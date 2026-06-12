@@ -150,7 +150,7 @@ def test_create_server_passes_all_adapters_to_registry(mock_adapters):
         create_server()
 
     assert "adapters" in captured
-    assert len(captured["adapters"]) == 7
+    assert len(captured["adapters"]) == 8  # tq, sina, akshare, eastmoney, iwencai, bao, yf, tencent
 
 
 def test_main_runs_server_with_stdio_transport(mock_adapters):

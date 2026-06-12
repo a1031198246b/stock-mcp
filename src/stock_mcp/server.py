@@ -8,6 +8,7 @@ from .adapters.eastmoney import EastmoneyAdapter
 from .adapters.iwencai import IwencaiAdapter
 from .adapters.registry import AdapterRegistry
 from .adapters.sina import SinaAdapter
+from .adapters.tencent import TencentAdapter
 from .adapters.tqcenter import TqcenterAdapter
 from .adapters.yfinance_source import YfinanceAdapter
 from .cache.sqlite_cache import SQLiteCache
@@ -40,8 +41,9 @@ def create_server() -> FastMCP:
     iwencai.initialize()
     bao = BaostockAdapter()
     yf = YfinanceAdapter()
+    tencent = TencentAdapter()
 
-    registry = AdapterRegistry([tq, sina, akshare, eastmoney, iwencai, bao, yf])
+    registry = AdapterRegistry([tq, sina, akshare, eastmoney, iwencai, bao, yf, tencent])
 
     quote_service = QuoteService(registry, cache, ttl_calc)
     kline_service = KlineService(registry, cache, ttl_calc)
